@@ -324,6 +324,53 @@ Update golfer world rankings and tier assignments (Monday before Masters).
 
 ---
 
+### POST /api/admin/upsert-golfers
+
+Add or update golfers in a single request. Recommended for pre-tournament field updates.
+
+**Request Body:**
+```json
+{
+  "golfers": [
+    { "id": "9478", "name": "Scottie Scheffler", "world_rank": 1, "tier": 1 },
+    { "id": "9780", "name": "Jon Rahm", "world_rank": 2, "tier": 1 },
+    { "id": "NEW123", "name": "New Golfer", "world_rank": 50, "tier": 3 }
+  ]
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | ESPN athlete ID |
+| `name` | string | Yes | Golfer display name |
+| `world_rank` | number | Yes | Current world ranking (positive integer) |
+| `tier` | number | Yes | Tier assignment (1, 2, 3, or 4) |
+
+**Response:**
+```json
+{
+  "created": 1,
+  "updated": 2,
+  "total": 3
+}
+```
+
+**Behavior:**
+- **Existing golfers** (matching ID): Updates `name`, `world_rank`, `tier` only. Preserves scoring data (`score_to_par`, `thru`, `position`, `status`, `round_scores`).
+- **New golfers**: Creates with provided data and default scoring values (null/empty).
+
+**Validation errors (422):**
+```json
+{
+  "detail": "Validation errors",
+  "errors": [
+    "golfers[0]: tier must be 1, 2, 3, or 4"
+  ]
+}
+```
+
+---
+
 ### POST /api/admin/update-score
 
 Manually update a single golfer's score (ESPN fallback).

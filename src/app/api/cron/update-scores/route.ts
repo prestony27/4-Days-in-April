@@ -70,22 +70,18 @@ async function handleUpdateScores(request: NextRequest) {
     last_score_update: new Date().toISOString(),
   });
 
-  // Get existing golfer map (match by name since ESPN IDs might differ from seeded IDs)
+  // Get set of golfer IDs in our DB (for logging unmatched golfers)
   const { data: existingGolfers } = await db
     .from(TABLE_GOLFERS)
-    .select("id, name");
+    .select("id");
 
-  const nameToDbId = new Map<string, string>();
-  for (const g of existingGolfers || []) {
-    nameToDbId.set(g.name.toLowerCase().trim(), g.id);
-  }
+  const dbGolferIds = new Set((existingGolfers || []).map((g) => g.id));
 
-  // Update golfer scores in DB
+  // Update golfer scores in DB (match directly on ESPN ID)
   let updatedCount = 0;
   for (const gs of golferScores) {
-    const dbId = nameToDbId.get(gs.name.toLowerCase().trim());
-    if (!dbId) {
-      console.log(`Golfer not in DB (not in field?): ${gs.name}`);
+    if (!dbGolferIds.has(gs.espnId)) {
+      console.log(`Golfer not in DB (ESPN ID ${gs.espnId}): ${gs.name}`);
       continue;
     }
 
@@ -100,7 +96,7 @@ async function handleUpdateScores(request: NextRequest) {
         total_strokes: gs.totalStrokes,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", dbId);
+      .eq("id", gs.espnId);
 
     if (!error) {
       updatedCount++;

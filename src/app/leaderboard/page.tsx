@@ -48,7 +48,7 @@ export default function LeaderboardPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["leaderboard"],
     queryFn: fetchLeaderboard,
-    refetchInterval: 30_000,
+    refetchInterval: 120_000, // 2 minutes - data updates via cron every 10 min
     refetchOnWindowFocus: true,
   });
 

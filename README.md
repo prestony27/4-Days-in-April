@@ -30,7 +30,7 @@ A fantasy golf contest website for the 2026 Masters Tournament (April 9-12). Use
 1. **Switch to live Stripe keys** - Update `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in Vercel
 2. **Monitor submissions** - Teams visible in Supabase dashboard
 3. **Handle withdrawals** - If a golfer withdraws, use `/api/admin/withdraw-golfer` to auto-refund affected teams
-4. **Monitor cron** - Verify `/api/cron/update-scores` runs every 2 minutes during tournament
+4. **Monitor cron** - Verify `/api/cron/update-scores` runs every 10 minutes during tournament hours (8am-8pm EDT)
 
 ## Tech Stack
 
@@ -119,7 +119,7 @@ TheMasters/
 │   ├── leaderboard/page.tsx    # Live tournament leaderboard
 │   ├── submit/page.tsx         # Payment info page
 │   ├── submit/success/page.tsx # Post-payment confirmation
-│   ├── rules/page.tsx          # Full pool rules
+│   ├── rules/page.tsx          # Full contest rules
 │   └── api/                    # API route handlers
 │       ├── health/route.ts
 │       ├── golfers/route.ts
@@ -162,7 +162,7 @@ The frontend uses the Next.js App Router (`src/app/`). Each directory under `src
 | `/leaderboard` | `leaderboard/page.tsx` | Client | Live-updating leaderboard (locked until submission deadline) |
 | `/submit` | `submit/page.tsx` | Static | Entry info page with CTA to the team builder |
 | `/submit/success` | `submit/success/page.tsx` | Client | Post-payment confirmation with team details and golfer picks |
-| `/rules` | `rules/page.tsx` | Static | Full pool rules rendered from constants |
+| `/rules` | `rules/page.tsx` | Static | Full contest rules rendered from constants |
 
 ### State Management
 
@@ -250,18 +250,40 @@ All require `Authorization: Bearer {ADMIN_API_KEY}`.
 |--------|----------|-------------|
 | POST | `/api/admin/seed-golfers` | Seed golfer data (requires `id` field — ESPN athlete ID) |
 | POST | `/api/admin/update-rankings` | Update golfer world rankings and tiers |
+| POST | `/api/admin/upsert-golfers` | Add or update golfers (recommended for field updates) |
 | POST | `/api/admin/update-score` | Manually update one golfer's score |
 | POST | `/api/admin/update-scores-bulk` | Bulk score update + auto team recalculation |
 | POST | `/api/admin/withdraw-golfer` | Pre-tournament withdrawal: refunds affected teams, sends notification |
 | POST | `/api/admin/close-submissions` | Emergency submission close |
 | POST | `/api/admin/open-submissions` | Re-open submissions |
 
+#### Upsert Golfers (Recommended for Field Updates)
+
+Use this endpoint to update the tournament field before the event. It handles both adding new golfers and updating existing ones in a single request, while preserving any scoring data.
+
+```bash
+curl -X POST https://4-days-in-april.vercel.app/api/admin/upsert-golfers \
+  -H "Authorization: Bearer {ADMIN_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "golfers": [
+      { "id": "9478", "name": "Scottie Scheffler", "world_rank": 1, "tier": 1 },
+      { "id": "9780", "name": "Jon Rahm", "world_rank": 2, "tier": 1 }
+    ]
+  }'
+```
+
+**Response:** `{ "created": 0, "updated": 2, "total": 2 }`
+
+- **For existing golfers**: Updates `name`, `world_rank`, `tier` only. Preserves `score_to_par`, `thru`, `position`, `status`.
+- **For new golfers**: Creates with provided data and default scoring values.
+
 ### Caching Strategy
 
 Vercel Edge caches responses based on `Cache-Control` headers set by each endpoint:
 
 - **Golfers**: `s-maxage=60, stale-while-revalidate=120` — data changes rarely
-- **Leaderboard/Teams**: `s-maxage=30, stale-while-revalidate=60` — updates every 2 min via cron
+- **Leaderboard/Teams**: `s-maxage=30, stale-while-revalidate=60` — updates every 10 min via cron
 - **My Teams**: `private, no-store` — user-specific, never cached
 - **Submit/Webhooks/Admin**: No caching — write operations
 
@@ -342,7 +364,7 @@ If a golfer is withdrawn (`STATUS_WITHDRAWN`) or disqualified (`STATUS_DISQUALIF
 
 ### Score Update Flow (Cron)
 
-Every 2 minutes during the tournament:
+Every 10 minutes during tournament hours (8am-8pm EDT):
 1. Cron hits `/api/cron/update-scores`
 2. ESPN API fetched for leaderboard data
 3. Each golfer's `score_to_par`, `thru`, `status`, `position` updated in DB
@@ -390,7 +412,7 @@ tier1_golfer_id, tier2a_golfer_id, tier2b_golfer_id, tier3_golfer_id, tier4_golf
 2. Set Framework Preset to **Next.js**
 3. Set all environment variables in Vercel project settings
 4. Deploy — Vercel handles everything automatically
-5. Cron job (`/api/cron/update-scores`) runs every 2 minutes during tournament
+5. Cron job (`/api/cron/update-scores`) runs every 10 minutes during tournament hours (8am-8pm EDT)
 
 ### Stripe Webhooks
 
@@ -416,7 +438,7 @@ tier1_golfer_id, tier2a_golfer_id, tier2b_golfer_id, tier3_golfer_id, tier4_golf
 3. Use the service role key for backend access (not the anon key)
 4. Initialize tournament_state with `id = true` row
 
-## Pool Rules Summary
+## Contest Rules Summary
 
 1. Pick 5 golfers: 1 from ranks 1-10, 2 from 11-30, 1 from 31-50, 1 from 51+
 2. Lowest combined score to par wins
