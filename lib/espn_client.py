@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 
@@ -54,37 +56,86 @@ class ESPNClient(GolfDataSource):
     """Fetches live golf scores from ESPN's public JSON API.
 
     Endpoint: GET https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?event={id}
+
+    Includes rate limiting (min 120s between requests) and retry with backoff.
     """
 
-    def __init__(self, timeout: float = 15.0):
+    MIN_REQUEST_INTERVAL = 120  # seconds between ESPN requests
+
+    def __init__(
+        self,
+        timeout: float = 15.0,
+        max_retries: int = 3,
+        client: httpx.AsyncClient | None = None,
+    ):
         self._timeout = timeout
+        self._max_retries = max_retries
+        self._external_client = client
+        self._last_request_time: float = 0
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Return the shared client or create one with retry transport."""
+        if self._external_client:
+            return self._external_client
+        transport = httpx.AsyncHTTPTransport(retries=self._max_retries)
+        return httpx.AsyncClient(timeout=self._timeout, transport=transport)
 
     async def _fetch_event(self, tournament_id: str) -> dict:
-        """Fetch raw ESPN event JSON."""
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
+        """Fetch raw ESPN event JSON with rate limiting and retry."""
+        # Rate limiting: enforce minimum interval between requests
+        now = time.monotonic()
+        elapsed = now - self._last_request_time
+        if self._last_request_time > 0 and elapsed < self.MIN_REQUEST_INTERVAL:
+            wait = self.MIN_REQUEST_INTERVAL - elapsed
+            logger.info("Rate limit: waiting %.1fs before next ESPN request", wait)
+            await asyncio.sleep(wait)
+
+        client = await self._get_client()
+        owns_client = self._external_client is None
+        try:
             resp = await client.get(ESPN_LEADERBOARD_URL, params={"event": tournament_id})
+            self._last_request_time = time.monotonic()
             resp.raise_for_status()
             data = resp.json()
+        finally:
+            if owns_client:
+                await client.aclose()
 
         events = data.get("events", [])
         if not events:
             raise ValueError(f"No event data returned for tournament {tournament_id}")
         return events[0]
 
+    @staticmethod
+    def _get_competitors(event: dict) -> list[dict]:
+        """Extract competitors from event, handling ESPN's nested structure."""
+        competitions = event.get("competitions", [])
+        if competitions:
+            return competitions[0].get("competitors", [])
+        return event.get("competitors", [])
+
     async def get_leaderboard(self, tournament_id: str) -> list[GolferScore]:
         """Parse ESPN competitors into GolferScore models."""
         event = await self._fetch_event(tournament_id)
-        competitors = event.get("competitors", [])
-        now = datetime.utcnow()
+        competitors = self._get_competitors(event)
+        now = datetime.now(timezone.utc)
 
         golfers: list[GolferScore] = []
+        parse_failures = 0
         for comp in competitors:
             try:
                 golfer = self._parse_competitor(comp, now)
                 golfers.append(golfer)
             except Exception:
+                parse_failures += 1
                 name = comp.get("athlete", {}).get("displayName", "unknown")
-                logger.warning("Failed to parse competitor: %s", name, exc_info=True)
+                logger.error("Failed to parse competitor: %s", name, exc_info=True)
+
+        if parse_failures > 0:
+            logger.error(
+                "ESPN parse: %d/%d competitors failed to parse",
+                parse_failures, len(competitors),
+            )
 
         return golfers
 
@@ -100,25 +151,22 @@ class ESPNClient(GolfDataSource):
 
         # Determine current round from competitor data
         current_round = 0
-        competitors = event.get("competitors", [])
+        competitors = self._get_competitors(event)
         for comp in competitors:
             comp_status = comp.get("status", {})
+            # status.period is the round number the player is in
+            period = comp_status.get("period")
+            if period and period > current_round:
+                current_round = period
             if comp_status.get("type", {}).get("name") == "STATUS_IN_PROGRESS":
-                linescores = comp.get("linescores", [])
-                current_round = max(current_round, len(linescores))
-                break
-
-        # If no one is in progress, infer from linescores of first competitor
-        if current_round == 0 and competitors:
-            linescores = competitors[0].get("linescores", [])
-            current_round = len([ls for ls in linescores if ls.get("value") is not None and ls.get("value") > 0])
+                break  # found an active player, round is reliable
 
         return TournamentState(
             current_round=current_round,
             tournament_status=tournament_status,
             submissions_open=tournament_status == TournamentStatus.PRE_TOURNAMENT,
             cut_line=None,  # ESPN doesn't directly expose this; computed separately
-            last_score_update=datetime.utcnow(),
+            last_score_update=datetime.now(timezone.utc),
         )
 
     @staticmethod

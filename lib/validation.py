@@ -44,7 +44,7 @@ def check_submissions_open() -> None:
         raise ValidationError("Submissions are closed. The deadline was 5:00 AM EST, April 9th.")
 
     db = get_supabase()
-    state = db.table("tournament_state").select("submissions_open").eq("id", 1).single().execute()
+    state = db.table("tournament_state").select("submissions_open").eq("id", True).single().execute()
     if state.data and not state.data["submissions_open"]:
         raise ValidationError("Submissions have been manually closed.")
 
@@ -59,8 +59,9 @@ def validate_tier_placement(golfer_picks: list[dict]) -> None:
         rank = pick["world_rank"]
         low, high = TIER_RANK_RANGES[tier]
         if not (low <= rank <= high):
+            tier_num = tier.value if hasattr(tier, 'value') else tier
             raise ValidationError(
-                f"Golfer '{pick['name']}' (rank {rank}) does not belong in Tier {tier} "
+                f"Golfer '{pick['name']}' (rank {rank}) does not belong in Tier {tier_num} "
                 f"(ranks {low}-{high}).",
                 field="golfers",
             )
@@ -78,14 +79,15 @@ def validate_tier_composition(golfer_picks: list[dict]) -> None:
     for tier_val, expected in TIER_PICK_COUNTS.items():
         actual = tier_counts.get(tier_val, 0)
         if actual != expected:
+            tier_num = tier_val.value if hasattr(tier_val, 'value') else tier_val
             raise ValidationError(
-                f"Tier {tier_val} requires {expected} golfer(s), but got {actual}.",
+                f"Tier {tier_num} requires {expected} golfer(s), but got {actual}.",
                 field="golfers",
             )
 
 
 def validate_no_duplicate_golfers(email: str, new_golfer_ids: list[str]) -> None:
-    """Ensure no golfer appears on more than one of a contestant's paid teams."""
+    """Ensure no golfer appears on more than one of a contestant's teams (paid or pending)."""
     db = get_supabase()
 
     # Get contestant
@@ -95,18 +97,24 @@ def validate_no_duplicate_golfers(email: str, new_golfer_ids: list[str]) -> None
 
     contestant_id = contestant_resp.data[0]["id"]
 
-    # Get existing paid teams
+    # Check ALL non-refunded teams (paid + pending) to prevent bypass via unpaid teams
     teams_resp = (
         db.table("teams")
-        .select("golfer_ids")
+        .select("tier1_golfer_id, tier2a_golfer_id, tier2b_golfer_id, tier3_golfer_id, tier4_golfer_id")
         .eq("contestant_id", contestant_id)
-        .eq("payment_status", "paid")
+        .in_("payment_status", ["completed", "pending"])
         .execute()
     )
 
     existing_golfer_ids: set[str] = set()
     for team in teams_resp.data:
-        existing_golfer_ids.update(team["golfer_ids"])
+        existing_golfer_ids.update([
+            team["tier1_golfer_id"],
+            team["tier2a_golfer_id"],
+            team["tier2b_golfer_id"],
+            team["tier3_golfer_id"],
+            team["tier4_golfer_id"],
+        ])
 
     for gid in new_golfer_ids:
         if gid in existing_golfer_ids:
@@ -120,7 +128,12 @@ def validate_no_duplicate_golfers(email: str, new_golfer_ids: list[str]) -> None
 
 
 def validate_max_teams(email: str) -> None:
-    """Ensure contestant hasn't exceeded the max team limit."""
+    """Ensure contestant hasn't exceeded the max team limit.
+
+    Two checks to prevent orphan-team attacks:
+    1. Max 3 completed (paid) teams — the actual pool rule
+    2. Max 1 pending (unpaid) team at a time — prevents blocking via abandoned checkouts
+    """
     db = get_supabase()
 
     contestant_resp = db.table("contestants").select("id").eq("email", email).execute()
@@ -129,18 +142,32 @@ def validate_max_teams(email: str) -> None:
 
     contestant_id = contestant_resp.data[0]["id"]
 
-    teams_resp = (
+    # Check completed teams against the 3-team rule
+    completed_resp = (
         db.table("teams")
         .select("id", count="exact")
         .eq("contestant_id", contestant_id)
-        .in_("payment_status", ["paid", "unpaid"])
+        .eq("payment_status", "completed")
         .execute()
     )
-
-    if teams_resp.count is not None and teams_resp.count >= MAX_TEAMS_PER_EMAIL:
+    if completed_resp.count is not None and completed_resp.count >= MAX_TEAMS_PER_EMAIL:
         raise ValidationError(
             f"Maximum of {MAX_TEAMS_PER_EMAIL} teams per person. "
             "You already have the maximum number of teams.",
+            field="email",
+        )
+
+    # Check pending teams — only 1 allowed at a time to prevent abuse
+    pending_resp = (
+        db.table("teams")
+        .select("id", count="exact")
+        .eq("contestant_id", contestant_id)
+        .eq("payment_status", "pending")
+        .execute()
+    )
+    if pending_resp.count is not None and pending_resp.count >= 1:
+        raise ValidationError(
+            "You have a pending payment. Complete or cancel it before submitting another team.",
             field="email",
         )
 
