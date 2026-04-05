@@ -16,7 +16,7 @@ const RULES = [
   },
   {
     number: 4,
-    text: `The pool website will re-rank teams on the website's Leaderboard as often as updated tournament scoring data is available.`,
+    text: `The contest website will re-rank teams on the website's Leaderboard as often as updated tournament scoring data is available.`,
   },
   {
     number: 5,
@@ -36,7 +36,7 @@ const RULES = [
   },
   {
     number: 9,
-    text: `Prize Distribution: Entry fees first offset operational costs. The remaining pool is distributed: 1st place (50%), 2nd place (30%), 3rd place (20%). Exact distribution may be adjusted based on total entries.`,
+    text: `Prize Distribution: Entry fees first offset operational costs. The remaining prize fund is distributed: 1st place (50%), 2nd place (30%), 3rd place (20%). Exact distribution may be adjusted based on total entries.`,
   },
 ];
 
@@ -44,7 +44,7 @@ export default function RulesPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-2">Pool Rules</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold mb-2">Contest Rules</h1>
         <p className="text-muted-foreground">
           Official rules for Four Days in April 2026
         </p>

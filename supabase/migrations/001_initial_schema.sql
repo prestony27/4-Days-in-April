@@ -1,4 +1,4 @@
--- Masters Pool: Initial database schema
+-- 4 Days in April Contest: Initial database schema
 -- Tables: golfers, contestants, teams, tournament_state
 
 -- =============================================================================
@@ -27,7 +27,7 @@ CREATE INDEX idx_golfers_status ON golfers (status);
 CREATE INDEX idx_golfers_world_rank ON golfers (world_rank);
 
 -- =============================================================================
--- CONTESTANTS — people entering the pool
+-- CONTESTANTS — people entering the contest
 -- =============================================================================
 CREATE TABLE contestants (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

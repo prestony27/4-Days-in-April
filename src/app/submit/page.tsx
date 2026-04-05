@@ -11,7 +11,7 @@ export default function SubmitPage() {
       <Card>
         <CardContent className="pt-8 pb-8 space-y-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-2">Enter the Pool</h1>
+            <h1 className="text-2xl font-bold mb-2">Enter the Contest</h1>
             <p className="text-muted-foreground">
               Build your team to get started. Payment is collected after you
               finalize your picks.

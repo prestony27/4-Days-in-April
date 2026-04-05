@@ -144,7 +144,7 @@ export default function HomePage() {
             <span className="text-muted-foreground">per team</span>
           </div>
           <p className="text-sm text-muted-foreground mb-6">
-            Up to {MAX_TEAMS} teams per person. Prize pool: 50% / 30% / 20%.
+            Up to {MAX_TEAMS} teams per person. Prize distribution: 50% / 30% / 20%.
           </p>
           <Button
             asChild

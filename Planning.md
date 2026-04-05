@@ -1,7 +1,7 @@
-# Masters Pool Website - Architecture Planning
+# 4 Days in April Contest - Architecture Planning
 
 ## Overview
-A website to host a Masters Pool competition with live scoring, team submissions, and payment processing.
+A website to host the 4 Days in April Contest with live scoring, team submissions, and payment processing.
 
 **Tech Stack Decisions:**
 - Frontend: React/Next.js
@@ -532,7 +532,7 @@ The backend recommends Supabase which has built-in realtime subscriptions. Consi
 - Leaderboard: No server cache (client handles polling)
 
 **Metadata:**
-- Dynamic OG images for social sharing ("My Masters Pool Team")
+- Dynamic OG images for social sharing ("My 4 Days in April Team")
 - Proper meta tags for each page
 - JSON-LD structured data for SEO
 
@@ -1264,7 +1264,7 @@ Payment Card Industry Data Security Standard - requirements for handling credit 
 - **Contest/Sweepstakes:** Involves skill and/or no purchase necessary
 - **Fantasy Sports:** Skill-based selection of real athletes
 
-**Masters Pool Analysis:**
+**4 Days in April Contest Analysis:**
 - Selecting golfers requires knowledge/skill (research, rankings, past performance)
 - Similar to fantasy sports which are legal in most states under UIGEA (2006)
 - Entry fee with prize pool is common in fantasy sports
@@ -1560,7 +1560,7 @@ You have **5 days** to build, test, deploy, and accept payments for a live syste
 
 **Key Factors:**
 - Entry fee required ($30)
-- Prize is monetary (implied - where does the pool money go?)
+- Prize is monetary (implied - where does the prize money go?)
 - Element of chance (golfer performance)
 
 **Even "skill-based" contests with entry fees are regulated in many states.** Daily Fantasy Sports (DFS) companies like DraftKings/FanDuel spent years and millions in legal fees to get licensed.
@@ -1593,7 +1593,7 @@ You have **5 days** to build, test, deploy, and accept payments for a live syste
 
 **Augusta National is famously litigious.** They have sued over use of "Masters" in unrelated contexts.
 
-**Recommendation:** Do NOT use "Masters" in the domain name. Use generic terms like "Golf Pool" or "Spring Golf Classic" in official branding. Keep "Masters" only in private communications.
+**Recommendation:** Do NOT use "Masters" in the domain name. Use generic terms like "4 Days in April" or "Spring Golf Classic" in official branding. Keep "Masters" only in private communications.
 
 #### 3. Prize Money Handling
 
@@ -1711,7 +1711,7 @@ You have **5 days** to build, test, deploy, and accept payments for a live syste
 
 **Rules.md does not specify tiebreaker.**
 
-**Scenario:** Two teams finish at -30. Who wins the pool? 
+**Scenario:** Two teams finish at -30. Who wins the contest? 
 
 Options:
 - Split the prize?
@@ -1881,7 +1881,7 @@ Given 5 days, here's what I'd prioritize:
    - I recommend Option A with responsive switch to Option B on larger screens
 
 **Visual Identity:**
-2. Do you have any branding assets (logo, colors, fonts) for the pool, or should we use a clean default theme?
+2. Do you have any branding assets (logo, colors, fonts) for the contest, or should we use a clean default theme?
 3. Any preference for a color scheme? Suggestions:
    - Masters green (#006747) as primary accent
    - Neutral with green highlights
@@ -1889,7 +1889,7 @@ Given 5 days, here's what I'd prioritize:
 
 **Leaderboard Features:**
 4. Should users be able to filter the leaderboard to "My Teams" only (requires entering their email)?
-5. Should team details (golfer breakdown) be visible to everyone, or hidden until tournament ends? (Some pools keep picks private)
+5. Should team details (golfer breakdown) be visible to everyone, or hidden until tournament ends? (Some contests keep picks private)
 
 **Real-Time Updates:**
 6. The backend recommends Supabase which supports real-time subscriptions. Should we use:

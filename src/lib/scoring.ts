@@ -1,5 +1,5 @@
 /**
- * Score calculation and tiebreaker logic for the Masters Pool.
+ * Score calculation and tiebreaker logic for the 4 Days in April Contest.
  *
  * Rules summary:
  * - Team score = sum of 5 golfers' scores to par.

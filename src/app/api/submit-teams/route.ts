@@ -311,7 +311,7 @@ export async function POST(request: NextRequest) {
         price_data: {
           currency: "usd",
           product_data: {
-            name: `Masters Pool Entry: ${team.team_name}`,
+            name: `4 Days in April Contest Entry: ${team.team_name}`,
             description: `Team ${index + 1} of ${body.teams.length} for ${body.name}`,
           },
           unit_amount: ENTRY_FEE_CENTS,

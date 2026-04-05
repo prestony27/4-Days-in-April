@@ -1,4 +1,4 @@
-# Masters Pool API Reference
+# 4 Days in April Contest API Reference
 
 Base URL: `/api`
 

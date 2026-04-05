@@ -1,15 +1,16 @@
-# Four Days in April 2026
+# Four Days in April 2026 Contest
 
-A fantasy golf pool website for the 2026 Masters Tournament (April 9-12). Users pick 5 golfers across tiered World Golf Rankings, pay a $30 entry fee, and compete for cash prizes based on combined tournament scores.
+A fantasy golf contest website for the 2026 Masters Tournament (April 9-12). Users pick 5 golfers across tiered World Golf Rankings, pay a $30 entry fee, and compete for cash prizes based on combined tournament scores.
 
 **Live Site:** https://4-days-in-april.vercel.app/
 
 **Key Features:**
 - Guided team builder wizard with tier-based golfer selection
 - Multi-team cart with single checkout (submit up to 3 teams at once)
-- Live tournament leaderboard with auto-polling
-- Stripe Checkout payment integration
+- Live tournament leaderboard with auto-polling (locked until submissions close)
+- Stripe Checkout payment integration with automatic refunds
 - Confirmation emails via Resend
+- Pre-tournament withdrawal handling with auto-refunds
 - ESPN-sourced live scoring with admin fallback
 - Mobile-first responsive design
 
@@ -18,16 +19,18 @@ A fantasy golf pool website for the 2026 Masters Tournament (April 9-12). Users 
 | Component | Status | Notes |
 |-----------|--------|-------|
 | Frontend (Next.js) | ✅ Deployed | Live on Vercel |
-| Backend (Next.js API Routes) | ✅ Deployed | All 15 endpoints working |
-| Database (Supabase) | ✅ Ready | Schema deployed |
-| Stripe Payments | ✅ Configured | Webhook endpoint active |
-| Golfer Data | ✅ Ready | 91 golfers with OWGR + ESPN IDs |
+| Backend (Next.js API Routes) | ✅ Deployed | 17 endpoints working |
+| Database (Supabase) | ✅ Ready | Schema deployed, 91 golfers seeded |
+| Stripe Payments | ✅ Configured | Test + live webhooks active |
+| Email (Resend) | ✅ Configured | Confirmation emails on payment |
+| Golfer Data | ✅ Seeded | 91 golfers with OWGR + ESPN IDs |
 
-### Next Steps
+### Pre-Tournament Checklist
 
-1. **Seed golfer data** - POST `masters_field_2026.json` to `/api/admin/seed-golfers`
-2. **Test end-to-end** - Submit a team, complete payment, verify on leaderboard
-3. **Monitor cron** - Verify `/api/cron/update-scores` runs every 2 minutes during tournament
+1. **Switch to live Stripe keys** - Update `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in Vercel
+2. **Monitor submissions** - Teams visible in Supabase dashboard
+3. **Handle withdrawals** - If a golfer withdraws, use `/api/admin/withdraw-golfer` to auto-refund affected teams
+4. **Monitor cron** - Verify `/api/cron/update-scores` runs every 2 minutes during tournament
 
 ## Tech Stack
 
@@ -155,10 +158,10 @@ The frontend uses the Next.js App Router (`src/app/`). Each directory under `src
 |-------|------|-----------|---------|
 | `/` | `page.tsx` | Static | Landing page with countdown timer, rules overview, tier breakdown, and CTAs |
 | `/rankings` | `rankings/page.tsx` | Client | Searchable, collapsible tier-grouped golfer list. Fetches from `/api/golfers` |
-| `/teams/builder` | `teams/builder/page.tsx` | Client | 6-step team builder wizard (email/name, 4 tier picks, review + submit) |
-| `/leaderboard` | `leaderboard/page.tsx` | Client | Live-updating leaderboard with expandable team rows and score details |
+| `/teams/builder` | `teams/builder/page.tsx` | Client | 6-step team builder wizard with multi-team cart support |
+| `/leaderboard` | `leaderboard/page.tsx` | Client | Live-updating leaderboard (locked until submission deadline) |
 | `/submit` | `submit/page.tsx` | Static | Entry info page with CTA to the team builder |
-| `/submit/success` | `submit/success/page.tsx` | Client | Post-payment confirmation (Stripe redirects here after checkout) |
+| `/submit/success` | `submit/success/page.tsx` | Client | Post-payment confirmation with team details and golfer picks |
 | `/rules` | `rules/page.tsx` | Static | Full pool rules rendered from constants |
 
 ### State Management
@@ -225,7 +228,7 @@ All API routes are Next.js Route Handlers in `src/app/api/`. Each `route.ts` fil
 |--------|----------|-------|------------|-------------|
 | GET | `/api/golfers` | 60s CDN | — | List all golfers. Optional `?tier=1` filter |
 | GET | `/api/golfers/{id}` | 60s CDN | — | Single golfer details |
-| GET | `/api/leaderboard` | 30s CDN | — | Ranked teams with golfer scores and tiebreakers |
+| GET | `/api/leaderboard` | 30s CDN | — | Ranked teams (empty until deadline passes) |
 | GET | `/api/teams/{id}` | 30s CDN | — | Single team detail (paid teams only) |
 | GET | `/api/my-teams?email=` | No cache | 15/min | All teams for a given email |
 | POST | `/api/submit-team` | — | 5/min | Validate picks, create team, return Stripe Checkout URL |
@@ -249,6 +252,7 @@ All require `Authorization: Bearer {ADMIN_API_KEY}`.
 | POST | `/api/admin/update-rankings` | Update golfer world rankings and tiers |
 | POST | `/api/admin/update-score` | Manually update one golfer's score |
 | POST | `/api/admin/update-scores-bulk` | Bulk score update + auto team recalculation |
+| POST | `/api/admin/withdraw-golfer` | Pre-tournament withdrawal: refunds affected teams, sends notification |
 | POST | `/api/admin/close-submissions` | Emergency submission close |
 | POST | `/api/admin/open-submissions` | Re-open submissions |
 
@@ -309,9 +313,23 @@ stripe listen --forward-to localhost:3000/api/webhooks/payment
 
 Submission deadline: **5:00 AM EDT, April 9, 2026** (first round tee times). Enforced in `src/lib/validation.ts` and can be overridden via admin endpoints.
 
+### Leaderboard Visibility
+
+The leaderboard is **locked until the submission deadline** to prevent users from copying other teams' picks. Before the deadline, `/api/leaderboard` returns an empty list and the frontend shows a "Not Yet Available" message with countdown.
+
 ### Duplicate Golfer Prevention
 
 A golfer cannot appear on more than one of a user's paid teams. Validation checks only `completed` (paid) teams — pending/unpaid teams do not lock golfers. For multi-team cart submissions, duplicates are also checked across all teams in the cart before checkout. Post-insert race condition detection catches concurrent submissions.
+
+### Pre-Tournament Withdrawals
+
+If a golfer withdraws before the tournament starts:
+1. Admin calls `POST /api/admin/withdraw-golfer` with the golfer's ID
+2. System finds all completed teams containing that golfer
+3. Each affected team receives an automatic $30 Stripe refund
+4. Team is marked as `payment_status: "refunded"` (excluded from leaderboard and team limits)
+5. Notification email sent to each affected user with refund confirmation
+6. Users can submit a new team through the normal process
 
 ### Score Calculation
 
@@ -376,9 +394,13 @@ tier1_golfer_id, tier2a_golfer_id, tier2b_golfer_id, tier3_golfer_id, tier4_golf
 
 ### Stripe Webhooks
 
-1. Create a webhook destination in Stripe dashboard pointing to `https://4-days-in-april.vercel.app/api/webhooks/payment`
-2. Subscribe to `checkout.session.completed` and `charge.refunded` events
-3. Set `STRIPE_WEBHOOK_SECRET` to the webhook signing secret
+**Important:** Test mode and live mode require separate webhooks with different signing secrets.
+
+1. In Stripe dashboard, toggle to the correct mode (Test/Live)
+2. Create a webhook endpoint: `https://4-days-in-april.vercel.app/api/webhooks/payment`
+3. Subscribe to `checkout.session.completed` and `charge.refunded` events
+4. Copy the signing secret and set `STRIPE_WEBHOOK_SECRET` in Vercel
+5. When switching modes, update both `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`
 
 ### Resend (Email)
 

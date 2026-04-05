@@ -1,4 +1,4 @@
-# Masters Pool - Risk Register
+# 4 Days in April Contest - Risk Register
 
 **Last Updated:** 2026-04-05
 **Risk Owner:** Devil's Advocate Agent
@@ -119,7 +119,7 @@ All route files now use correct column names matching the schema. Remaining mino
   2. **At minimum: email confirmation code** - send a 6-digit code, require it before submission
   3. **Rate limit the my-teams endpoint** aggressively
   4. **Don't expose full team details in my-teams without verification** - show team count only, require code for details
-  5. **For payouts: verify identity out-of-band** (the pool is likely among friends, so this may be acceptable for MVP)
+  5. **For payouts: verify identity out-of-band** (the contest is likely among friends, so this may be acceptable for MVP)
 
 ### R8: WGR data accuracy and timing
 - **Severity:** HIGH
@@ -173,11 +173,11 @@ All route files now use correct column names matching the schema. Remaining mino
   - The word "pool" combined with money entry fees could be classified as gambling in some jurisdictions
   - State-by-state gambling laws vary significantly
 - **Mitigations:**
-  1. **Don't use "Masters" in the domain name** - use a generic name like "Golf Pool 2026"
+  1. **Don't use "Masters" in the domain name** - use a generic name like "4 Days in April"
   2. **Add disclaimer:** "This site is not affiliated with or endorsed by Augusta National Golf Club"
   3. **Keep it private/invite-only** rather than public-facing - reduces legal exposure
   4. **Frame as "contest of skill" not gambling** - fantasy sports exemptions may apply
-  5. **Consult a lawyer before going public** (probably overkill for a friend group pool)
+  5. **Consult a lawyer before going public** (probably overkill for a friend group contest)
 
 ### R12: Database connection limits under load
 - **Severity:** MEDIUM

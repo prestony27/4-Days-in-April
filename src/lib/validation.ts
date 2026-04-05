@@ -187,7 +187,7 @@ export async function validateNoDuplicateGolfers(
  * Ensure contestant hasn't exceeded the max team limit.
  *
  * Two checks to prevent orphan-team attacks:
- * 1. Max 3 completed (paid) teams — the actual pool rule
+ * 1. Max 3 completed (paid) teams — the actual contest rule
  * 2. Max 1 pending (unpaid) team at a time — prevents blocking via abandoned checkouts
  */
 export async function validateMaxTeams(email: string): Promise<void> {
