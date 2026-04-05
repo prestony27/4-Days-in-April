@@ -1,6 +1,6 @@
 """Root FastAPI app — all API routes are mounted here.
 
-Vercel routes all /api/* requests to this single FastAPI handler.
+Vercel routes all /api/* requests to this single handler via Mangum.
 """
 
 import logging
@@ -10,6 +10,7 @@ import sys
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from mangum import Mangum
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -92,3 +93,7 @@ app.include_router(admin_router, prefix="/api")
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+# Mangum handler for Vercel serverless
+handler = Mangum(app, lifespan="off")
