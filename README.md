@@ -18,7 +18,7 @@ A fantasy golf pool website for the 2026 Masters Tournament (April 9-12). Users 
 | Backend | FastAPI (Python), Mangum (serverless adapter) |
 | Database | Supabase (PostgreSQL) |
 | Payments | Stripe Checkout + Webhooks |
-| Deployment | Vercel (frontend + serverless Python functions) |
+| Deployment | Vercel Pro (frontend + serverless Python functions) |
 
 ## Getting Started
 
