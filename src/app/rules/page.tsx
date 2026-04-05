@@ -28,7 +28,7 @@ const RULES = [
   },
   {
     number: 7,
-    text: `Pre-Tournament Withdrawals: If a golfer withdraws before Round 1 begins, affected contestants may resubmit their team with a replacement golfer. If no resubmission is received before the deadline, a full refund will be issued.`,
+    text: `Pre-Tournament Withdrawals: If a golfer withdraws before Round 1 begins, affected contestants will receive a full refund and may submit a new team in the affected team's place.`,
   },
   {
     number: 8,
