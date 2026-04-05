@@ -36,7 +36,7 @@ const RULES = [
   },
   {
     number: 9,
-    text: `Prize Distribution: Entry fees first offset operational costs. The remaining prize fund is distributed: 1st place (50%), 2nd place (30%), 3rd place (20%). Exact distribution may be adjusted based on total entries.`,
+    text: `Prize Distribution: This is a not-for-profit contest operated among friends. Entry fees first offset operational costs (payment processing and website hosting). All remaining funds are awarded as prizes: 1st place (50%), 2nd place (30%), 3rd place (20%). No individual profits from this contest. Exact distribution may be adjusted based on total entries.`,
   },
 ];
 

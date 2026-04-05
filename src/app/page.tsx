@@ -143,8 +143,11 @@ export default function HomePage() {
             <span className="text-5xl font-bold text-primary">${ENTRY_FEE}</span>
             <span className="text-muted-foreground">per team</span>
           </div>
-          <p className="text-sm text-muted-foreground mb-6">
+          <p className="text-sm text-muted-foreground mb-2">
             Up to {MAX_TEAMS} teams per person. Prize distribution: 50% / 30% / 20%.
+          </p>
+          <p className="text-xs text-muted-foreground mb-6">
+            Not-for-profit. Entry fees cover operational costs only — the rest goes to prizes.
           </p>
           <Button
             asChild
