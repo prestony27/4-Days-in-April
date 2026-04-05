@@ -54,10 +54,10 @@ export function CountdownTimer({ compact = false }: { compact?: boolean }) {
         { value: timeLeft.seconds, label: "Sec" },
       ].map(({ value, label }) => (
         <div key={label} className="flex flex-col items-center">
-          <span className="text-2xl sm:text-4xl font-bold font-mono tabular-nums text-primary">
+          <span className="text-2xl sm:text-4xl font-bold font-mono tabular-nums text-white">
             {String(value).padStart(2, "0")}
           </span>
-          <span className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wider">
+          <span className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">
             {label}
           </span>
         </div>

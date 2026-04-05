@@ -69,8 +69,7 @@ export default function HomePage() {
             <Button
               asChild
               size="lg"
-              variant="outline"
-              className="border-white text-white hover:bg-white/10 min-h-[44px] text-base"
+              className="border-2 border-white bg-transparent text-white hover:bg-white/20 min-h-[44px] text-base font-semibold"
             >
               <Link href="/leaderboard">View Leaderboard</Link>
             </Button>
