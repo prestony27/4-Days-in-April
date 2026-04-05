@@ -9,7 +9,8 @@
 import { NextRequest } from "next/server";
 import Stripe from "stripe";
 import { getSupabase } from "@/lib/db";
-import { TABLE_TEAMS } from "@/lib/schema";
+import { TABLE_TEAMS, TABLE_CONTESTANTS, TABLE_GOLFERS, TIER_GOLFER_COLS } from "@/lib/schema";
+import { sendConfirmationEmail } from "@/lib/email";
 
 // Force Node.js runtime for Stripe signature verification
 export const runtime = "nodejs";
@@ -68,9 +69,15 @@ export async function POST(request: NextRequest) {
   // Handle checkout.session.completed
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    const teamId = session.client_reference_id || session.metadata?.team_id;
+    const paymentId = session.payment_intent as string || session.id;
 
-    if (teamId) {
+    // Support batch payments (team_ids is comma-separated) or single team
+    const teamIdsStr = session.metadata?.team_ids;
+    const teamIds = teamIdsStr
+      ? teamIdsStr.split(",")
+      : [session.client_reference_id || session.metadata?.team_id].filter(Boolean) as string[];
+
+    for (const teamId of teamIds) {
       // Idempotency: only update if not already completed (Stripe retries for 72h)
       const { data: teamData } = await db
         .from(TABLE_TEAMS)
@@ -83,13 +90,99 @@ export async function POST(request: NextRequest) {
           .from(TABLE_TEAMS)
           .update({
             payment_status: "completed",
-            payment_id: session.payment_intent as string || session.id,
+            payment_id: paymentId,
             status: "active",
           })
           .eq("id", teamId);
 
         console.log(`Team ${teamId} marked as completed`);
       }
+    }
+
+    if (teamIds.length > 1) {
+      console.log(`Batch payment completed: ${teamIds.length} teams`);
+    }
+
+    // Send confirmation email
+    try {
+      // Fetch team details with golfer info
+      const { data: teamsData } = await db
+        .from(TABLE_TEAMS)
+        .select(`
+          id,
+          team_name,
+          contestant_id,
+          tier1_golfer_id,
+          tier2a_golfer_id,
+          tier2b_golfer_id,
+          tier3_golfer_id,
+          tier4_golfer_id
+        `)
+        .in("id", teamIds);
+
+      if (teamsData && teamsData.length > 0) {
+        // Get contestant info
+        const contestantId = teamsData[0].contestant_id;
+        const { data: contestant } = await db
+          .from(TABLE_CONTESTANTS)
+          .select("email, name")
+          .eq("id", contestantId)
+          .single();
+
+        if (contestant) {
+          // Collect all golfer IDs
+          const allGolferIds = new Set<string>();
+          for (const team of teamsData) {
+            for (const col of TIER_GOLFER_COLS) {
+              const gid = team[col as keyof typeof team] as string | null;
+              if (gid) allGolferIds.add(gid);
+            }
+          }
+
+          // Fetch golfer details
+          const { data: golfersData } = await db
+            .from(TABLE_GOLFERS)
+            .select("id, name, tier, world_rank")
+            .in("id", Array.from(allGolferIds));
+
+          const golferMap = new Map(
+            (golfersData || []).map((g) => [g.id, g])
+          );
+
+          // Build team confirmations
+          const teamConfirmations = teamsData.map((team) => {
+            const golferIds = [
+              team.tier1_golfer_id,
+              team.tier2a_golfer_id,
+              team.tier2b_golfer_id,
+              team.tier3_golfer_id,
+              team.tier4_golfer_id,
+            ].filter(Boolean) as string[];
+
+            return {
+              team_name: team.team_name,
+              golfers: golferIds.map((gid) => {
+                const g = golferMap.get(gid);
+                return {
+                  name: g?.name || "Unknown",
+                  tier: g?.tier || 0,
+                  world_rank: g?.world_rank || 0,
+                };
+              }),
+            };
+          });
+
+          await sendConfirmationEmail({
+            to: contestant.email,
+            contestantName: contestant.name,
+            teams: teamConfirmations,
+            totalPaid: teamIds.length * 30,
+          });
+        }
+      }
+    } catch (emailErr) {
+      // Don't fail the webhook if email fails
+      console.error("Failed to send confirmation email:", emailErr);
     }
   }
 

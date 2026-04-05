@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import type { Golfer, Tier, TeamGolferSlot } from "@/types";
 
+interface CartTeam {
+  team_name: string;
+  selections: TeamGolferSlot[];
+}
+
 interface TeamBuilderState {
   /** Current wizard step: 0=email, 1=tier1, 2=tier2, 3=tier3, 4=tier4, 5=review */
   currentStep: number;
@@ -16,6 +21,8 @@ interface TeamBuilderState {
   usedGolferIds: Set<string>;
   /** How many teams this user has already submitted */
   submittedTeamCount: number;
+  /** Cart of teams ready for checkout */
+  cart: CartTeam[];
 
   // Actions
   setEmail: (email: string) => void;
@@ -32,11 +39,19 @@ interface TeamBuilderState {
   getAllSelections: () => TeamGolferSlot[];
   isGolferSelected: (golferId: string) => boolean;
   isGolferUsedInOtherTeam: (golferId: string) => boolean;
+  isGolferInCart: (golferId: string) => boolean;
   isTierComplete: (tier: Tier) => boolean;
+  addToCart: () => void;
+  removeFromCart: (index: number) => void;
+  clearCart: () => void;
+  getCartGolferIds: () => string[];
+  canAddMoreTeams: () => boolean;
   reset: () => void;
+  resetForNewTeam: () => void;
 }
 
 const TIER_PICK_COUNTS: Record<Tier, number> = { 1: 1, 2: 2, 3: 1, 4: 1 };
+const MAX_TEAMS = 3;
 
 export const useTeamBuilderStore = create<TeamBuilderState>((set, get) => ({
   currentStep: 0,
@@ -46,6 +61,7 @@ export const useTeamBuilderStore = create<TeamBuilderState>((set, get) => ({
   selections: new Map(),
   usedGolferIds: new Set(),
   submittedTeamCount: 0,
+  cart: [],
 
   setEmail: (email) => set({ email }),
   setName: (name) => set({ name }),
@@ -93,11 +109,49 @@ export const useTeamBuilderStore = create<TeamBuilderState>((set, get) => ({
 
   isGolferUsedInOtherTeam: (golferId) => get().usedGolferIds.has(golferId),
 
+  isGolferInCart: (golferId) => {
+    const { cart } = get();
+    return cart.some((team) =>
+      team.selections.some((s) => s.golfer_id === golferId)
+    );
+  },
+
   isTierComplete: (tier) => {
     const count = Array.from(get().selections.values()).filter(
       (s) => s.tier === tier
     ).length;
     return count >= TIER_PICK_COUNTS[tier];
+  },
+
+  addToCart: () => {
+    const { teamName, selections, cart } = get();
+    const newTeam: CartTeam = {
+      team_name: teamName,
+      selections: Array.from(selections.values()),
+    };
+    set({
+      cart: [...cart, newTeam],
+      teamName: "",
+      selections: new Map(),
+      currentStep: 1, // Go back to tier 1 selection for next team
+    });
+  },
+
+  removeFromCart: (index) => {
+    const { cart } = get();
+    set({ cart: cart.filter((_, i) => i !== index) });
+  },
+
+  clearCart: () => set({ cart: [] }),
+
+  getCartGolferIds: () => {
+    const { cart } = get();
+    return cart.flatMap((team) => team.selections.map((s) => s.golfer_id));
+  },
+
+  canAddMoreTeams: () => {
+    const { submittedTeamCount, cart } = get();
+    return submittedTeamCount + cart.length < MAX_TEAMS;
   },
 
   reset: () =>
@@ -107,5 +161,13 @@ export const useTeamBuilderStore = create<TeamBuilderState>((set, get) => ({
       name: "",
       teamName: "",
       selections: new Map(),
+      cart: [],
+    }),
+
+  resetForNewTeam: () =>
+    set({
+      teamName: "",
+      selections: new Map(),
+      currentStep: 1,
     }),
 }));

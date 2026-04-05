@@ -148,12 +148,12 @@ export async function validateNoDuplicateGolfers(
 
   const contestantId = contestantData.id;
 
-  // Check ALL non-refunded teams (paid + pending) to prevent bypass via unpaid teams
+  // Check only completed (paid) teams — pending teams are cleaned up on new submission
   const { data: teamsData } = await db
     .from(TABLE_TEAMS)
     .select(TIER_GOLFER_COLS.join(", "))
     .eq("contestant_id", contestantId)
-    .in("payment_status", ["completed", "pending"]);
+    .eq("payment_status", "completed");
 
   const existingGolferIds = new Set<string>();
   for (const team of teamsData || []) {
@@ -215,20 +215,6 @@ export async function validateMaxTeams(email: string): Promise<void> {
   if (completedCount !== null && completedCount >= MAX_TEAMS_PER_EMAIL) {
     throw new ValidationError(
       `Maximum of ${MAX_TEAMS_PER_EMAIL} teams per person. You already have the maximum number of teams.`,
-      "email"
-    );
-  }
-
-  // Check pending teams — only 1 allowed at a time to prevent abuse
-  const { count: pendingCount } = await db
-    .from(TABLE_TEAMS)
-    .select("id", { count: "exact", head: true })
-    .eq("contestant_id", contestantId)
-    .eq("payment_status", "pending");
-
-  if (pendingCount !== null && pendingCount >= 1) {
-    throw new ValidationError(
-      "You have a pending payment. Complete or cancel it before submitting another team.",
       "email"
     );
   }

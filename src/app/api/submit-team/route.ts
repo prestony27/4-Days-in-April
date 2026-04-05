@@ -160,6 +160,13 @@ export async function POST(request: NextRequest) {
     tierMap.tier2b_golfer_id = tier2Golfers[1];
   }
 
+  // Clean up any existing pending teams for this user (prevents orphaned teams)
+  await db
+    .from(TABLE_TEAMS)
+    .delete()
+    .eq("contestant_id", contestantId)
+    .eq("payment_status", "pending");
+
   // Insert team (pending payment)
   const teamData = {
     contestant_id: contestantId,
@@ -201,29 +208,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 2. Max 1 pending team (prevent orphan-team attack)
-  const { count: pendingCount } = await db
-    .from(TABLE_TEAMS)
-    .select("id", { count: "exact", head: true })
-    .eq("contestant_id", contestantId)
-    .eq("payment_status", "pending");
-
-  if (pendingCount !== null && pendingCount > 1) {
-    await db.from(TABLE_TEAMS).delete().eq("id", teamId);
-    return Response.json(
-      { detail: { message: "Complete or cancel your pending payment before submitting another team.", field: "email" } },
-      { status: 409 }
-    );
-  }
-
-  // 3. Post-insert race condition check: verify no duplicate golfers snuck in
+  // 2. Post-insert race condition check: verify no duplicate golfers snuck in
   const newGolferIds = new Set(Object.values(tierMap));
   const { data: otherTeams } = await db
     .from(TABLE_TEAMS)
     .select(TIER_GOLFER_COLS.join(", "))
     .eq("contestant_id", contestantId)
-    .in("payment_status", ["completed", "pending"])
-    .neq("id", teamId);
+    .eq("payment_status", "completed");
 
   const existingGolferIds = new Set<string>();
   for (const t of otherTeams || []) {

@@ -260,6 +260,7 @@ function TierStep({
           {tierGolfers.map((golfer) => {
             const selected = store.isGolferSelected(golfer.id);
             const usedInOther = store.isGolferUsedInOtherTeam(golfer.id);
+            const usedInCart = store.isGolferInCart(golfer.id);
             const tierFull = isTierDone && !selected;
 
             return (
@@ -267,13 +268,15 @@ function TierStep({
                 key={golfer.id}
                 golfer={golfer}
                 selected={selected}
-                disabled={usedInOther || tierFull}
+                disabled={usedInOther || usedInCart || tierFull}
                 disabledReason={
                   usedInOther
                     ? "Already on another team"
-                    : tierFull
-                      ? "Tier is full"
-                      : undefined
+                    : usedInCart
+                      ? "Already in cart"
+                      : tierFull
+                        ? "Tier is full"
+                        : undefined
                 }
                 onSelect={store.selectGolfer}
                 onDeselect={store.deselectGolfer}
@@ -305,42 +308,86 @@ function ReviewStep({ golfers }: { golfers: Golfer[] }) {
   const allSelections = store.getAllSelections();
   const isComplete = allSelections.length === 5;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const canAddMore = store.canAddMoreTeams();
+  const cartCount = store.cart.length;
+  const totalTeams = cartCount + (isComplete ? 1 : 0);
+  const totalPrice = totalTeams * 30;
 
-  const handleSubmit = async () => {
-    if (isSubmitting) return;
+  const selectionsToGolfers = (selections: typeof allSelections) => {
+    const tier1 = selections.find((s) => s.tier === 1);
+    const tier2 = selections.filter((s) => s.tier === 2);
+    const tier3 = selections.find((s) => s.tier === 3);
+    const tier4 = selections.find((s) => s.tier === 4);
+    if (!tier1 || tier2.length !== 2 || !tier3 || !tier4) return null;
+    return {
+      tier1: tier1.golfer_id,
+      tier2_a: tier2[0].golfer_id,
+      tier2_b: tier2[1].golfer_id,
+      tier3: tier3.golfer_id,
+      tier4: tier4.golfer_id,
+    };
+  };
+
+  const handleAddToCart = () => {
     if (!isComplete) {
       toast.error("Please select all 5 golfers");
       return;
     }
+    if (!store.teamName.trim()) {
+      toast.error("Please enter a team name");
+      return;
+    }
+    store.addToCart();
+    toast.success("Team added to cart! Build another team or checkout.");
+  };
 
-    // Map selections to the backend's expected format: { tier1, tier2_a, tier2_b, tier3, tier4 }
-    const tier1 = allSelections.find((s) => s.tier === 1);
-    const tier2 = allSelections.filter((s) => s.tier === 2);
-    const tier3 = allSelections.find((s) => s.tier === 3);
-    const tier4 = allSelections.find((s) => s.tier === 4);
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    if (!isComplete && cartCount === 0) {
+      toast.error("Please select all 5 golfers or add teams to cart");
+      return;
+    }
 
-    if (!tier1 || tier2.length !== 2 || !tier3 || !tier4) {
-      toast.error("Invalid tier selections. Please go back and check.");
+    // Build all teams to submit (cart + current if complete)
+    const teamsToSubmit: Array<{ team_name: string; golfers: ReturnType<typeof selectionsToGolfers> }> = [];
+
+    // Add cart teams
+    for (const cartTeam of store.cart) {
+      const golfers = selectionsToGolfers(cartTeam.selections);
+      if (!golfers) {
+        toast.error(`Invalid selections in cart team: ${cartTeam.team_name}`);
+        return;
+      }
+      teamsToSubmit.push({ team_name: cartTeam.team_name, golfers });
+    }
+
+    // Add current team if complete
+    if (isComplete) {
+      const golfers = selectionsToGolfers(allSelections);
+      if (!golfers) {
+        toast.error("Invalid tier selections. Please go back and check.");
+        return;
+      }
+      teamsToSubmit.push({ team_name: store.teamName, golfers });
+    }
+
+    if (teamsToSubmit.length === 0) {
+      toast.error("No teams to submit");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/submit-team", {
+      // Use batch endpoint for multiple teams, single endpoint for one
+      const endpoint = teamsToSubmit.length > 1 ? "/api/submit-teams" : "/api/submit-team";
+      const body = teamsToSubmit.length > 1
+        ? { email: store.email, name: store.name, teams: teamsToSubmit }
+        : { email: store.email, name: store.name, team_name: teamsToSubmit[0].team_name, golfers: teamsToSubmit[0].golfers };
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: store.email,
-          name: store.name,
-          team_name: store.teamName,
-          golfers: {
-            tier1: tier1.golfer_id,
-            tier2_a: tier2[0].golfer_id,
-            tier2_b: tier2[1].golfer_id,
-            tier3: tier3.golfer_id,
-            tier4: tier4.golfer_id,
-          },
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -351,11 +398,11 @@ function ReviewStep({ golfers }: { golfers: Golfer[] }) {
       }
 
       const data = await res.json();
-      // Redirect to Stripe checkout
       if (data.payment_url) {
         window.location.href = data.payment_url;
       } else {
-        window.location.href = `/submit?team_id=${data.team_id}`;
+        const teamId = data.team_id || data.team_ids?.[0];
+        window.location.href = `/submit?team_id=${teamId}`;
       }
     } catch {
       toast.error("Something went wrong. Please try again.");
@@ -366,9 +413,39 @@ function ReviewStep({ golfers }: { golfers: Golfer[] }) {
 
   return (
     <div>
+      {/* Cart Summary */}
+      {cartCount > 0 && (
+        <Card className="mb-4 border-primary/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center justify-between">
+              <span>Cart ({cartCount} team{cartCount > 1 ? "s" : ""})</span>
+              <Badge variant="secondary">${cartCount * 30}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              {store.cart.map((cartTeam, idx) => (
+                <div key={idx} className="flex items-center justify-between text-sm bg-muted/50 rounded px-3 py-2">
+                  <span className="font-medium">{cartTeam.team_name}</span>
+                  <button
+                    onClick={() => store.removeFromCart(idx)}
+                    className="text-destructive hover:underline text-xs"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Current Team Review */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Review Your Team: {store.teamName}</CardTitle>
+          <CardTitle>
+            {isComplete ? `Current Team: ${store.teamName}` : "Current Team (incomplete)"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -413,17 +490,33 @@ function ReviewStep({ golfers }: { golfers: Golfer[] }) {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
+      {/* Actions */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
         <Button variant="outline" onClick={store.prevStep} className="min-h-[44px]">
           Back
         </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={!isComplete || isSubmitting}
-          className="min-h-[44px] bg-primary hover:bg-primary/90"
-        >
-          {isSubmitting ? "Submitting..." : "Submit & Pay $30"}
-        </Button>
+        <div className="flex gap-2 flex-col sm:flex-row">
+          {canAddMore && isComplete && (
+            <Button
+              variant="outline"
+              onClick={handleAddToCart}
+              className="min-h-[44px]"
+            >
+              Add Another Team
+            </Button>
+          )}
+          <Button
+            onClick={handleSubmit}
+            disabled={(!isComplete && cartCount === 0) || isSubmitting}
+            className="min-h-[44px] bg-primary hover:bg-primary/90"
+          >
+            {isSubmitting
+              ? "Submitting..."
+              : totalTeams > 1
+                ? `Checkout ${totalTeams} Teams - $${totalPrice}`
+                : `Submit & Pay $${totalPrice}`}
+          </Button>
+        </div>
       </div>
     </div>
   );
