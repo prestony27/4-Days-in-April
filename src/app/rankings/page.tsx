@@ -59,7 +59,7 @@ export default function RankingsPage() {
           World Golf Rankings
         </h1>
         <p className="text-muted-foreground">
-          Masters field organized by tier. Rankings locked as of 9:00 AM EST,
+          Tournament field organized by tier. Rankings locked as of 9:00 AM EST,
           Monday April 6th.
         </p>
       </div>

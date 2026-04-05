@@ -17,9 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "The Masters Pool 2026",
+  title: "Four Days in April 2026",
   description:
-    "Pick your golfers, build your team, and compete for cash prizes in the 2026 Masters Tournament pool.",
+    "Pick your golfers, build your team, and compete for cash prizes in the 2026 golf pool.",
 };
 
 export default function RootLayout({

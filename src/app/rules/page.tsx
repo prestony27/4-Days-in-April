@@ -16,7 +16,7 @@ const RULES = [
   },
   {
     number: 4,
-    text: `The pool website will re-rank teams on the website's Leaderboard as often as updated Masters scoring data is available.`,
+    text: `The pool website will re-rank teams on the website's Leaderboard as often as updated tournament scoring data is available.`,
   },
   {
     number: 5,
@@ -46,7 +46,7 @@ export default function RulesPage() {
       <div className="mb-8 text-center">
         <h1 className="text-3xl sm:text-4xl font-bold mb-2">Pool Rules</h1>
         <p className="text-muted-foreground">
-          Official rules for The Masters Pool 2026
+          Official rules for Four Days in April 2026
         </p>
       </div>
 

@@ -15,13 +15,13 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-masters-green text-white">
+    <header className="sticky top-0 z-50 border-b border-border bg-brand-green text-white">
       <div className="mx-auto max-w-6xl px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo / Title */}
           <Link href="/" className="flex items-center gap-2">
             <span className="text-xl sm:text-2xl font-bold tracking-tight">
-              The Masters Pool
+              Four Days in April
             </span>
           </Link>
 
@@ -40,7 +40,7 @@ export function Header() {
 
           {/* Countdown (desktop) */}
           <div className="hidden md:flex items-center gap-2 text-white/90">
-            <span className="text-xs uppercase tracking-wider text-white/60">
+            <span className="text-xs uppercase tracking-wider text-white font-medium">
               Deadline:
             </span>
             <CountdownTimer compact />
@@ -91,7 +91,7 @@ export function Header() {
               </Link>
             ))}
             <div className="px-3 pt-2 flex items-center gap-2 text-white/90">
-              <span className="text-xs uppercase tracking-wider text-white/60">
+              <span className="text-xs uppercase tracking-wider text-white font-medium">
                 Deadline:
               </span>
               <CountdownTimer compact />

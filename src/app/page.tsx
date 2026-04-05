@@ -31,17 +31,17 @@ export default function HomePage() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative bg-masters-green text-white">
+      <section className="relative bg-brand-green text-white">
         <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-24 text-center">
-          <Badge className="mb-4 bg-masters-yellow text-masters-green-dark font-semibold">
+          <Badge className="mb-4 bg-brand-yellow text-brand-green-dark font-semibold">
             April 9-12, 2026
           </Badge>
           <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-4">
-            The Masters Pool
+            Four Days in April
           </h1>
           <p className="text-lg sm:text-xl text-white/80 max-w-2xl mx-auto mb-8">
             Pick your golfers. Build your team. Compete for cash prizes in the
-            2026 Masters Tournament.
+            2026 tournament.
           </p>
 
           {/* Countdown */}
@@ -62,7 +62,7 @@ export default function HomePage() {
             <Button
               asChild
               size="lg"
-              className="bg-masters-yellow text-masters-green-dark hover:bg-masters-yellow/90 font-semibold min-h-[44px] text-base"
+              className="bg-brand-yellow text-brand-green-dark hover:bg-brand-yellow/90 font-semibold min-h-[44px] text-base"
             >
               <Link href="/teams/builder">Build Your Team</Link>
             </Button>

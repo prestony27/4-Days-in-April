@@ -56,7 +56,7 @@ if _VERCEL:
 # ── Rate limiter ─────────────────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address)
 
-app = FastAPI(title="Masters Pool API", version="1.0.0")
+app = FastAPI(title="Four Days in April API", version="1.0.0")
 app.state.limiter = limiter
 
 
