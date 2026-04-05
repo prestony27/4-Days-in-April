@@ -5,10 +5,18 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { TierBadge } from "@/components/shared/tier-badge";
+import { CountdownTimer } from "@/components/shared/countdown-timer";
+import Link from "next/link";
 import type { LeaderboardResponse, LeaderboardGolfer, Tier } from "@/types";
 
-async function fetchLeaderboard(): Promise<LeaderboardResponse> {
+interface LeaderboardApiResponse extends LeaderboardResponse {
+  locked?: boolean;
+  unlocks_at?: string;
+}
+
+async function fetchLeaderboard(): Promise<LeaderboardApiResponse> {
   const res = await fetch("/api/leaderboard");
   if (!res.ok) throw new Error("Failed to fetch leaderboard");
   return res.json();
@@ -37,7 +45,7 @@ export default function LeaderboardPage() {
   const [searchFilter, setSearchFilter] = useState("");
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
 
-  const { data, isLoading, error, dataUpdatedAt } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["leaderboard"],
     queryFn: fetchLeaderboard,
     refetchInterval: 30_000,
@@ -46,6 +54,33 @@ export default function LeaderboardPage() {
 
   const teams = data?.teams ?? [];
   const lastUpdated = data?.last_updated;
+
+  // Show "not yet available" message if submissions are still open
+  if (!isLoading && data && data.locked === false) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center">
+        <h1 className="text-3xl font-bold mb-4">Leaderboard</h1>
+        <Card>
+          <CardContent className="py-8">
+            <div className="text-5xl mb-4">🔒</div>
+            <h2 className="text-xl font-semibold mb-2">Not Yet Available</h2>
+            <p className="text-muted-foreground mb-6">
+              The leaderboard will be visible once submissions close to prevent teams from copying picks.
+            </p>
+            <div className="mb-6">
+              <p className="text-sm text-muted-foreground mb-2">Submissions close in:</p>
+              <div className="inline-block bg-primary rounded-lg px-4 py-2">
+                <CountdownTimer />
+              </div>
+            </div>
+            <Button asChild>
+              <Link href="/teams/builder">Build Your Team</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const filteredTeams = searchFilter
     ? teams.filter(

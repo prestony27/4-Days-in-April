@@ -1,11 +1,33 @@
 /**
  * GET /api/leaderboard - Ranked teams with golfer scores and tiebreakers
+ *
+ * Only returns data after the submission deadline has passed.
  */
 
 import { NextRequest } from "next/server";
 import { getLeaderboard } from "@/lib/score-pipeline";
+import { SUBMISSION_DEADLINE } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
+  // Don't expose leaderboard until submissions are closed
+  const now = new Date();
+  if (now < SUBMISSION_DEADLINE) {
+    return Response.json(
+      {
+        teams: [],
+        total: 0,
+        last_updated: now.toISOString(),
+        locked: false,
+        unlocks_at: SUBMISSION_DEADLINE.toISOString(),
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        },
+      }
+    );
+  }
+
   const searchParams = request.nextUrl.searchParams;
 
   // Parse pagination params with defaults and bounds
@@ -25,6 +47,7 @@ export async function GET(request: NextRequest) {
         teams,
         total,
         last_updated: lastUpdated,
+        locked: true,
       },
       {
         headers: {
