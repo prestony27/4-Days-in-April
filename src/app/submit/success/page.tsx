@@ -1,10 +1,26 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { TIER_CONFIGS } from "@/types";
+
+interface Golfer {
+  id: string;
+  name: string;
+  world_rank: number;
+  tier: number;
+}
+
+interface Team {
+  id: string;
+  team_name: string;
+  contestant_name: string | null;
+  golfers: Golfer[];
+}
 
 export default function SuccessPage() {
   return (
@@ -23,41 +39,161 @@ export default function SuccessPage() {
 function SuccessContent() {
   const searchParams = useSearchParams();
   const teamId = searchParams.get("team_id");
+  const teamIdsParam = searchParams.get("team_ids");
+
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+
+  // Parse team IDs from URL params
+  const teamIds = teamIdsParam
+    ? teamIdsParam.split(",")
+    : teamId
+      ? [teamId]
+      : [];
+
+  useEffect(() => {
+    if (teamIds.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchTeams = async () => {
+      const fetchedTeams: Team[] = [];
+      let allFound = true;
+
+      for (const id of teamIds) {
+        try {
+          const res = await fetch(`/api/teams/${id}`);
+          if (res.ok) {
+            const data = await res.json();
+            fetchedTeams.push(data);
+          } else {
+            // Team not found (possibly webhook hasn't processed yet)
+            allFound = false;
+          }
+        } catch {
+          allFound = false;
+        }
+      }
+
+      if (fetchedTeams.length > 0) {
+        setTeams(fetchedTeams);
+      }
+
+      // If not all teams found and we haven't retried too many times, retry
+      if (!allFound && retryCount < 5) {
+        setTimeout(() => setRetryCount((c) => c + 1), 2000);
+      } else {
+        setLoading(false);
+      }
+    };
+
+    fetchTeams();
+  }, [teamIds.join(","), retryCount]);
+
+  const totalPaid = teams.length * 30;
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-16">
-      <Card className="text-center">
-        <CardContent className="pt-8 pb-8">
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4">
-            <svg
-              className="w-8 h-8 text-primary"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold mb-2">Team Submitted!</h1>
-          <p className="text-muted-foreground mb-6">
-            Your payment has been confirmed and your team is locked in. Good
-            luck in the tournament!
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild className="min-h-[44px]">
-              <Link href="/teams/builder">Build Another Team</Link>
-            </Button>
-            <Button asChild variant="outline" className="min-h-[44px]">
-              <Link href="/leaderboard">View Leaderboard</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="mx-auto max-w-2xl px-4 py-16">
+      {/* Success Header */}
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4">
+          <svg
+            className="w-8 h-8 text-primary"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold mb-2">
+          {teams.length > 1 ? `${teams.length} Teams Submitted!` : "Team Submitted!"}
+        </h1>
+        <p className="text-muted-foreground">
+          Your payment has been confirmed and your {teams.length > 1 ? "teams are" : "team is"} locked in.
+          Good luck in the tournament!
+        </p>
+      </div>
+
+      {/* Team Details */}
+      {loading ? (
+        <Card className="mb-6">
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground">Loading your team details...</p>
+          </CardContent>
+        </Card>
+      ) : teams.length > 0 ? (
+        <div className="space-y-4 mb-6">
+          {teams.map((team) => (
+            <Card key={team.id}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">{team.team_name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {TIER_CONFIGS.map((tc) => {
+                    const tierGolfers = team.golfers.filter((g) => g.tier === tc.tier);
+                    return (
+                      <div key={tc.tier} className="flex items-start gap-2">
+                        <Badge variant="outline" className="shrink-0 w-16 justify-center">
+                          Tier {tc.tier}
+                        </Badge>
+                        <div className="text-sm">
+                          {tierGolfers.map((g, i) => (
+                            <span key={g.id}>
+                              {g.name}
+                              <span className="text-muted-foreground"> #{g.world_rank}</span>
+                              {i < tierGolfers.length - 1 && ", "}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Payment Summary */}
+          <Card className="bg-muted/50">
+            <CardContent className="py-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Total Paid</span>
+                <span className="font-bold text-lg">${totalPaid}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {teams.length} team{teams.length > 1 ? "s" : ""} × $30
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <Card className="mb-6">
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground">
+              Your teams are being processed. Check the leaderboard to see your entries.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <Button asChild className="min-h-[44px]">
+          <Link href="/teams/builder">Build Another Team</Link>
+        </Button>
+        <Button asChild variant="outline" className="min-h-[44px]">
+          <Link href="/leaderboard">View Leaderboard</Link>
+        </Button>
+      </div>
     </div>
   );
 }

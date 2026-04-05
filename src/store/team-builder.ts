@@ -124,16 +124,19 @@ export const useTeamBuilderStore = create<TeamBuilderState>((set, get) => ({
   },
 
   addToCart: () => {
-    const { teamName, selections, cart } = get();
+    const { teamName, selections, cart, submittedTeamCount } = get();
     const newTeam: CartTeam = {
       team_name: teamName,
       selections: Array.from(selections.values()),
     };
+    const newCart = [...cart, newTeam];
+    const cartFull = submittedTeamCount + newCart.length >= MAX_TEAMS;
     set({
-      cart: [...cart, newTeam],
+      cart: newCart,
       teamName: "",
       selections: new Map(),
-      currentStep: 1, // Go back to tier 1 selection for next team
+      // If cart is now full, go to review; otherwise go to team name entry
+      currentStep: cartFull ? 5 : 0,
     });
   },
 

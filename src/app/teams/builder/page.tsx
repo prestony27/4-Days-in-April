@@ -117,8 +117,9 @@ export default function TeamBuilderPage() {
 }
 
 function EmailStep() {
-  const { email, setEmail, name, setName, teamName, setTeamName, nextStep, submittedTeamCount } =
-    useTeamBuilderStore();
+  const store = useTeamBuilderStore();
+  const { email, setEmail, name, setName, teamName, setTeamName, nextStep, submittedTeamCount, cart, setStep } = store;
+  const canAddMore = store.canAddMoreTeams();
 
   const handleContinue = () => {
     if (!name.trim()) {
@@ -136,41 +137,64 @@ function EmailStep() {
     nextStep();
   };
 
+  // If cart is full, show checkout prompt instead of new team form
+  if (!canAddMore && cart.length > 0) {
+    return (
+      <Card className="max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle>Cart Full</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">
+            You have {cart.length} team{cart.length > 1 ? "s" : ""} in your cart (maximum {MAX_TEAMS} teams allowed).
+          </p>
+          <Button onClick={() => setStep(5)} className="w-full min-h-[44px]">
+            Proceed to Checkout
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Get Started</CardTitle>
+        <CardTitle>{cart.length > 0 ? "Add Another Team" : "Get Started"}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium mb-1">
-            Your Name
-          </label>
-          <Input
-            id="name"
-            type="text"
-            placeholder="John Smith"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="min-h-[44px]"
-          />
-        </div>
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium mb-1">
-            Email Address
-          </label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="min-h-[44px]"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Used to associate your teams and track submissions
-          </p>
-        </div>
+        {cart.length === 0 && (
+          <>
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium mb-1">
+                Your Name
+              </label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Smith"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="min-h-[44px]"
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-1">
+                Email Address
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="min-h-[44px]"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Used to associate your teams and track submissions
+              </p>
+            </div>
+          </>
+        )}
         <div>
           <label htmlFor="teamName" className="block text-sm font-medium mb-1">
             Team Name
@@ -184,7 +208,12 @@ function EmailStep() {
             className="min-h-[44px]"
           />
         </div>
-        {submittedTeamCount > 0 && (
+        {cart.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {cart.length} team{cart.length > 1 ? "s" : ""} in cart. You can add {MAX_TEAMS - submittedTeamCount - cart.length} more.
+          </p>
+        )}
+        {submittedTeamCount > 0 && cart.length === 0 && (
           <p className="text-sm text-muted-foreground">
             You have {submittedTeamCount}/{MAX_TEAMS} teams submitted.
           </p>
@@ -196,6 +225,15 @@ function EmailStep() {
         >
           Continue
         </Button>
+        {cart.length > 0 && (
+          <Button
+            variant="outline"
+            onClick={() => setStep(5)}
+            className="w-full min-h-[44px]"
+          >
+            Skip to Checkout ({cart.length} team{cart.length > 1 ? "s" : ""})
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
