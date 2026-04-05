@@ -1,0 +1,642 @@
+{
+  "golfers": [
+    {
+      "name": "Scottie Scheffler",
+      "world_rank": 1,
+      "tier": 1,
+      "is_amateur": false,
+      "espn_id": "9478"
+    },
+    {
+      "name": "Jon Rahm",
+      "world_rank": 2,
+      "tier": 1,
+      "is_amateur": false,
+      "espn_id": "9780"
+    },
+    {
+      "name": "Rory McIlroy",
+      "world_rank": 3,
+      "tier": 1,
+      "is_amateur": false,
+      "espn_id": "3470"
+    },
+    {
+      "name": "Xander Schauffele",
+      "world_rank": 4,
+      "tier": 1,
+      "is_amateur": false,
+      "espn_id": "10140"
+    },
+    {
+      "name": "Cameron Young",
+      "world_rank": 5,
+      "tier": 1,
+      "is_amateur": false,
+      "espn_id": "11143"
+    },
+    {
+      "name": "Tommy Fleetwood",
+      "world_rank": 6,
+      "tier": 1,
+      "is_amateur": false,
+      "espn_id": "5539"
+    },
+    {
+      "name": "Matt Fitzpatrick",
+      "world_rank": 7,
+      "tier": 1,
+      "is_amateur": false,
+      "espn_id": "9037"
+    },
+    {
+      "name": "Russell Henley",
+      "world_rank": 8,
+      "tier": 1,
+      "is_amateur": false,
+      "espn_id": "5409"
+    },
+    {
+      "name": "Robert MacIntyre",
+      "world_rank": 9,
+      "tier": 1,
+      "is_amateur": false,
+      "espn_id": "11378"
+    },
+    {
+      "name": "Bryson DeChambeau",
+      "world_rank": 10,
+      "tier": 1,
+      "is_amateur": false,
+      "espn_id": "10046"
+    },
+    {
+      "name": "Ludvig Aberg",
+      "world_rank": 11,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "4375972"
+    },
+    {
+      "name": "Hideki Matsuyama",
+      "world_rank": 12,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "5860"
+    },
+    {
+      "name": "Collin Morikawa",
+      "world_rank": 13,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "10592"
+    },
+    {
+      "name": "Min Woo Lee",
+      "world_rank": 14,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "7083"
+    },
+    {
+      "name": "Si Woo Kim",
+      "world_rank": 15,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "7081"
+    },
+    {
+      "name": "Jake Knapp",
+      "world_rank": 16,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "9843"
+    },
+    {
+      "name": "Jacob Bridgeman",
+      "world_rank": 17,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "5054388"
+    },
+    {
+      "name": "Patrick Cantlay",
+      "world_rank": 18,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "6007"
+    },
+    {
+      "name": "Akshay Bhatia",
+      "world_rank": 19,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "4419142"
+    },
+    {
+      "name": "Sam Burns",
+      "world_rank": 20,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "9938"
+    },
+    {
+      "name": "Maverick McNealy",
+      "world_rank": 21,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "9530"
+    },
+    {
+      "name": "Viktor Hovland",
+      "world_rank": 22,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "4364873"
+    },
+    {
+      "name": "Alex Noren",
+      "world_rank": 23,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "3832"
+    },
+    {
+      "name": "Nicolai Hojgaard",
+      "world_rank": 24,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "11250"
+    },
+    {
+      "name": "Chris Gotterup",
+      "world_rank": 26,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "4690755"
+    },
+    {
+      "name": "Harris English",
+      "world_rank": 27,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "5408"
+    },
+    {
+      "name": "Sepp Straka",
+      "world_rank": 28,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "8961"
+    },
+    {
+      "name": "Ben Griffin",
+      "world_rank": 29,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "5962"
+    },
+    {
+      "name": "Shane Lowry",
+      "world_rank": 30,
+      "tier": 2,
+      "is_amateur": false,
+      "espn_id": "4587"
+    },
+    {
+      "name": "Jordan Spieth",
+      "world_rank": 31,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "5467"
+    },
+    {
+      "name": "Adam Scott",
+      "world_rank": 32,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "388"
+    },
+    {
+      "name": "Harry Hall",
+      "world_rank": 33,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "4589438"
+    },
+    {
+      "name": "J.J. Spaun",
+      "world_rank": 34,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "10166"
+    },
+    {
+      "name": "Justin Rose",
+      "world_rank": 35,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "569"
+    },
+    {
+      "name": "Ryan Gerard",
+      "world_rank": 36,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "5076021"
+    },
+    {
+      "name": "Justin Thomas",
+      "world_rank": 37,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "4848"
+    },
+    {
+      "name": "Jason Day",
+      "world_rank": 38,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "1680"
+    },
+    {
+      "name": "Corey Conners",
+      "world_rank": 39,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "9126"
+    },
+    {
+      "name": "Kurt Kitayama",
+      "world_rank": 40,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "10364"
+    },
+    {
+      "name": "Nick Taylor",
+      "world_rank": 43,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "3792"
+    },
+    {
+      "name": "Keegan Bradley",
+      "world_rank": 45,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "4513"
+    },
+    {
+      "name": "Sam Stevens",
+      "world_rank": 46,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "4426181"
+    },
+    {
+      "name": "Patrick Reed",
+      "world_rank": 47,
+      "tier": 3,
+      "is_amateur": false,
+      "espn_id": "5579"
+    },
+    {
+      "name": "Rasmus Hojgaard",
+      "world_rank": 51,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "11253"
+    },
+    {
+      "name": "Daniel Berger",
+      "world_rank": 52,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "9025"
+    },
+    {
+      "name": "Casey Jarvis",
+      "world_rank": 62,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4610056"
+    },
+    {
+      "name": "Ryan Fox",
+      "world_rank": 66,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4251"
+    },
+    {
+      "name": "Carlos Ortiz",
+      "world_rank": 67,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "5532"
+    },
+    {
+      "name": "Tyrrell Hatton",
+      "world_rank": 68,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "5553"
+    },
+    {
+      "name": "Matt McCarty",
+      "world_rank": 70,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4901368"
+    },
+    {
+      "name": "Gary Woodland",
+      "world_rank": 71,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "3550"
+    },
+    {
+      "name": "Aaron Rai",
+      "world_rank": 75,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "10906"
+    },
+    {
+      "name": "Nico Echavarria",
+      "world_rank": 81,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4408316"
+    },
+    {
+      "name": "Marco Penge",
+      "world_rank": 85,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4585549"
+    },
+    {
+      "name": "Max Greyserman",
+      "world_rank": 92,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "11101"
+    },
+    {
+      "name": "Brian Harman",
+      "world_rank": 94,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "1225"
+    },
+    {
+      "name": "Wyndham Clark",
+      "world_rank": 95,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "11119"
+    },
+    {
+      "name": "Haotong Li",
+      "world_rank": 96,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "9221"
+    },
+    {
+      "name": "Cameron Smith",
+      "world_rank": 98,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "9506"
+    },
+    {
+      "name": "Johnny Keefer",
+      "world_rank": 100,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "5217048"
+    },
+    {
+      "name": "Kristoffer Reitan",
+      "world_rank": 101,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4348470"
+    },
+    {
+      "name": "Tom McKibbin",
+      "world_rank": 102,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4348444"
+    },
+    {
+      "name": "Brooks Koepka",
+      "world_rank": 104,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "6798"
+    },
+    {
+      "name": "Michael Kim",
+      "world_rank": 106,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "8974"
+    },
+    {
+      "name": "Rasmus Neergaard-Petersen",
+      "world_rank": 107,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4858859"
+    },
+    {
+      "name": "Max Homa",
+      "world_rank": 109,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "8973"
+    },
+    {
+      "name": "Michael Brennan",
+      "world_rank": 112,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4921329"
+    },
+    {
+      "name": "Sungjae Im",
+      "world_rank": 114,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "11382"
+    },
+    {
+      "name": "Andrew Novak",
+      "world_rank": 118,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "11332"
+    },
+    {
+      "name": "Sami Valimaki",
+      "world_rank": 121,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4585548"
+    },
+    {
+      "name": "Sergio Garcia",
+      "world_rank": 132,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "158"
+    },
+    {
+      "name": "Dustin Johnson",
+      "world_rank": 156,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "3448"
+    },
+    {
+      "name": "Zach Johnson",
+      "world_rank": 157,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "686"
+    },
+    {
+      "name": "Charl Schwartzel",
+      "world_rank": 159,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "1097"
+    },
+    {
+      "name": "Bubba Watson",
+      "world_rank": 190,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "780"
+    },
+    {
+      "name": "Aldrich Potgieter",
+      "world_rank": 210,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "5080439"
+    },
+    {
+      "name": "Davis Riley",
+      "world_rank": 360,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "10058"
+    },
+    {
+      "name": "Brian Campbell",
+      "world_rank": 366,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "9525"
+    },
+    {
+      "name": "Danny Willett",
+      "world_rank": 448,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4304"
+    },
+    {
+      "name": "Fred Couples",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "91"
+    },
+    {
+      "name": "Naoyuki Kataoka",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "4837226"
+    },
+    {
+      "name": "Angel Cabrera",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "65"
+    },
+    {
+      "name": "Jackson Herrington",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": true,
+      "espn_id": "amateur_1"
+    },
+    {
+      "name": "Vijay Singh",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "392"
+    },
+    {
+      "name": "Ethan Fang",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": true,
+      "espn_id": "5293232"
+    },
+    {
+      "name": "Brandon Holtz",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": true,
+      "espn_id": "amateur_2"
+    },
+    {
+      "name": "Mike Weir",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "453"
+    },
+    {
+      "name": "Fifa Laopakdee",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": true,
+      "espn_id": "5327297"
+    },
+    {
+      "name": "Mateo Pulcini",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": true,
+      "espn_id": "amateur_3"
+    },
+    {
+      "name": "José María Olazábal",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": false,
+      "espn_id": "329"
+    },
+    {
+      "name": "Mason Howell",
+      "world_rank": null,
+      "tier": 4,
+      "is_amateur": true,
+      "espn_id": "5289811"
+    }
+  ],
+  "total": 91
+}

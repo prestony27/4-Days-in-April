@@ -1,6 +1,8 @@
-# The Masters Pool 2026
+# Four Days in April 2026
 
 A fantasy golf pool website for the 2026 Masters Tournament (April 9-12). Users pick 5 golfers across tiered World Golf Rankings, pay a $30 entry fee, and compete for cash prizes based on combined tournament scores.
+
+**Live Site:** https://4-days-in-april.vercel.app/
 
 **Key Features:**
 - Guided team builder wizard with tier-based golfer selection
@@ -8,6 +10,30 @@ A fantasy golf pool website for the 2026 Masters Tournament (April 9-12). Users 
 - Stripe Checkout payment integration
 - ESPN-sourced live scoring with admin fallback
 - Mobile-first responsive design
+
+## Current Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Frontend (Next.js) | ✅ Deployed | Live on Vercel |
+| Backend (FastAPI) | ⚠️ In Progress | Python serverless function returns 500 errors |
+| Database (Supabase) | ✅ Ready | Schema deployed |
+| Stripe Payments | 🔜 Pending | Not yet configured |
+| Golfer Data | ✅ Ready | 91 golfers with OWGR + ESPN IDs in `masters_field_2026.json` |
+
+### Known Issues
+
+**Python API not deploying on Vercel:** All `/api/*` endpoints return 500 errors. The Next.js frontend works, but the Python serverless function isn't being invoked. Possible causes:
+- `vercel.json` rewrites alone don't trigger Python function deployment
+- Vercel may need explicit `functions` configuration for hybrid Next.js + Python projects
+- `requirements.txt` may need to be in the `api/` directory
+
+### Next Steps
+
+1. **Fix Python API deployment** - Get `/api/health` returning `{"status": "ok"}`
+2. **Seed golfer data** - POST `masters_field_2026.json` to `/api/admin/seed-golfers`
+3. **Configure Stripe** - Add webhook endpoint, set env vars
+4. **Test end-to-end** - Submit a team, complete payment, verify on leaderboard
 
 ## Tech Stack
 
@@ -18,7 +44,9 @@ A fantasy golf pool website for the 2026 Masters Tournament (April 9-12). Users 
 | Backend | FastAPI (Python), Mangum (serverless adapter) |
 | Database | Supabase (PostgreSQL) |
 | Payments | Stripe Checkout + Webhooks |
-| Deployment | Vercel Pro (frontend + serverless Python functions) |
+| Deployment | Vercel (frontend + serverless Python functions) |
+| Rankings Data | DataGolf (OWGR scraping) |
+| Live Scores | ESPN Leaderboard API |
 
 ## Getting Started
 
@@ -183,7 +211,7 @@ Reusable card for displaying a golfer with rank badge, name, and tier indicator.
 Color-coded badge showing tier label and rank range. Each tier has a distinct color: amber (T1), blue (T2), emerald (T3), purple (T4).
 
 **`Header`** (`src/components/shared/header.tsx`)
-Sticky header with Masters green background. Desktop: horizontal nav links + compact countdown. Mobile: hamburger menu that expands to full nav. All touch targets are minimum 44px per Apple HIG.
+Sticky header with brand green background. Desktop: horizontal nav links + compact countdown. Mobile: hamburger menu that expands to full nav. All touch targets are minimum 44px per Apple HIG.
 
 ### Team Builder Wizard Flow
 
@@ -230,19 +258,19 @@ Each team row is expandable (tap to toggle). Expanded view shows individual golf
 
 ### Styling
 
-**Theme:** The app uses a custom Masters-inspired theme defined in `src/app/globals.css`:
+**Theme:** The app uses a custom green/gold theme defined in `src/app/globals.css`:
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `--color-masters-green` | `#006747` | Header, primary buttons, accents |
-| `--color-masters-green-light` | `#008a5e` | Hover states |
-| `--color-masters-green-dark` | `#004d35` | Badge text on yellow |
-| `--color-masters-yellow` | `#f2c75c` | Accent/highlight (CTA buttons, date badge) |
-| `--color-masters-cream` | `#faf8f0` | Page background |
+| `--color-brand-green` | `#006747` | Header, primary buttons, accents |
+| `--color-brand-green-light` | `#008a5e` | Hover states |
+| `--color-brand-green-dark` | `#004d35` | Badge text on yellow |
+| `--color-brand-yellow` | `#f2c75c` | Accent/highlight (CTA buttons, date badge) |
+| `--color-brand-cream` | `#faf8f0` | Page background |
 
-The `--primary` CSS variable is set to `#006747` so all shadcn/ui components (buttons, badges, rings) automatically use Masters green.
+The `--primary` CSS variable is set to `#006747` so all shadcn/ui components (buttons, badges, rings) automatically use brand green.
 
-**Tailwind CSS 4** with `@theme inline` block maps CSS variables to Tailwind utility classes (e.g., `bg-masters-green`, `text-masters-yellow`).
+**Tailwind CSS 4** with `@theme inline` block maps CSS variables to Tailwind utility classes (e.g., `bg-brand-green`, `text-brand-yellow`).
 
 **shadcn/ui** components are installed in `src/components/ui/`. They're unstyled primitives that inherit from the CSS variable theme. Installed components: button, card, badge, separator, accordion, progress, input, dialog, scroll-area, sheet.
 
@@ -810,17 +838,30 @@ supabase db push
 
 #### 4. Seed Golfer Data
 
+The 2026 tournament field is pre-populated in `masters_field_2026.json` with 91 golfers. Data sources:
+- **World rankings**: Scraped from [DataGolf major fields](https://datagolf.com/major-fields?major=masters)
+- **ESPN IDs**: Retrieved via ESPN search API (`site.web.api.espn.com/apis/common/v3/search`)
+
+| Field | Description |
+|-------|-------------|
+| `name` | Golfer display name |
+| `world_rank` | Official World Golf Ranking position (or 999 for unranked/amateurs) |
+| `tier` | 1 (ranks 1-10), 2 (11-30), 3 (31-50), 4 (51+) |
+| `espn_id` | ESPN athlete ID for live score matching |
+| `is_amateur` | Boolean flag for amateur golfers |
+
+**Tier breakdown:** 10 Tier 1, 19 Tier 2, 14 Tier 3, 48 Tier 4
+
+To seed golfers, POST the JSON to the admin endpoint:
+
 ```bash
 curl -X POST https://your-domain.com/api/admin/seed-golfers \
   -H "Authorization: Bearer $ADMIN_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"golfers": [
-    {"name": "Scottie Scheffler", "world_rank": 1, "tier": 1},
-    {"name": "Xander Schauffele", "world_rank": 2, "tier": 1}
-  ]}'
+  -d @masters_field_2026.json
 ```
 
-Update rankings on Monday before the Masters with `/api/admin/update-rankings`.
+Update rankings on Monday before the tournament with `/api/admin/update-rankings`.
 
 #### 5. Dashboard Monitoring
 
