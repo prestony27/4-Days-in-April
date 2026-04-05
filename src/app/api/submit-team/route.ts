@@ -15,6 +15,12 @@ import {
   type GolferPicksRaw,
 } from "@/lib/validation";
 import { checkRateLimit, getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  validateInviteCode,
+  checkInviteCodeLockout,
+  recordFailedAttempt,
+  clearFailedAttempts,
+} from "@/lib/invite-code";
 
 // Force Node.js runtime for Stripe
 export const runtime = "nodejs";
@@ -38,6 +44,7 @@ interface SubmitTeamRequest {
   name: string;
   team_name: string;
   golfers: GolferPicksRaw;
+  invite_code: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -52,6 +59,16 @@ export async function POST(request: NextRequest) {
     return rateLimitResponse();
   }
 
+  // Check invite code lockout status
+  const lockoutStatus = checkInviteCodeLockout(ip);
+  if (lockoutStatus.locked) {
+    const minutes = Math.ceil(lockoutStatus.retryAfter / 60);
+    return Response.json(
+      { detail: `Too many failed attempts. Try again in ${minutes} minute${minutes !== 1 ? "s" : ""}.` },
+      { status: 429 }
+    );
+  }
+
   // Parse request body
   let body: SubmitTeamRequest;
   try {
@@ -62,6 +79,26 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+
+  // Validate invite code
+  if (!body.invite_code || typeof body.invite_code !== "string") {
+    return Response.json(
+      { detail: { message: "Invite code is required", field: "invite_code" } },
+      { status: 422 }
+    );
+  }
+
+  const inviteResult = validateInviteCode(body.invite_code);
+  if (!inviteResult.valid) {
+    recordFailedAttempt(ip);
+    return Response.json(
+      { detail: { message: inviteResult.message, field: "invite_code" } },
+      { status: 422 }
+    );
+  }
+
+  // Clear failed attempts on successful validation
+  clearFailedAttempts(ip);
 
   // Basic field validation
   if (!body.email || typeof body.email !== "string") {

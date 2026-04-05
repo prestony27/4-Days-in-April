@@ -5,6 +5,7 @@ A fantasy golf contest website for the 2026 Masters Tournament (April 9-12). Use
 **Live Site:** https://4-days-in-april.vercel.app/
 
 **Key Features:**
+- **Invite-only access** — Private contest restricted to invited participants
 - Guided team builder wizard with tier-based golfer selection
 - Multi-team cart with single checkout (submit up to 3 teams at once)
 - Live tournament leaderboard with auto-polling (locked until submissions close)
@@ -80,7 +81,26 @@ RESEND_API_KEY=re_...
 FRONTEND_URL=http://localhost:3000
 ADMIN_API_KEY=your-admin-secret
 CRON_SECRET=your-cron-secret
+
+# Invite Codes (JSON array of valid codes)
+INVITE_CODES=["YourInviteCode"]
 ```
+
+### Invite Code Management
+
+This is a private, invite-only contest. Valid invite codes are stored in the `INVITE_CODES` environment variable as a JSON array:
+
+```env
+# Single code
+INVITE_CODES=["OGNoahBaker"]
+
+# Multiple codes
+INVITE_CODES=["Code1","Code2","Code3"]
+```
+
+- Codes are case-insensitive
+- Users are locked out for 15 minutes after 5 failed attempts
+- Codes are validated on both frontend and backend
 
 ### Running Locally
 

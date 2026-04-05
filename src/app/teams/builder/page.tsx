@@ -118,10 +118,23 @@ export default function TeamBuilderPage() {
 
 function EmailStep() {
   const store = useTeamBuilderStore();
-  const { email, setEmail, name, setName, teamName, setTeamName, nextStep, submittedTeamCount, cart, setStep } = store;
+  const {
+    email, setEmail,
+    name, setName,
+    teamName, setTeamName,
+    inviteCode, setInviteCode,
+    inviteCodeValidated, setInviteCodeValidated,
+    nextStep, submittedTeamCount, cart, setStep
+  } = store;
   const canAddMore = store.canAddMoreTeams();
+  const [isValidating, setIsValidating] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [lockoutInfo, setLockoutInfo] = useState<{ locked: boolean; retryAfter: number } | null>(null);
 
-  const handleContinue = () => {
+  // Show invite code field only on first team and when not yet validated
+  const showInviteCode = cart.length === 0 && !inviteCodeValidated;
+
+  const handleContinue = async () => {
     if (!name.trim()) {
       toast.error("Please enter your name");
       return;
@@ -134,6 +147,46 @@ function EmailStep() {
       toast.error("Please enter a team name");
       return;
     }
+
+    // Validate invite code if needed
+    if (showInviteCode) {
+      if (!inviteCode.trim()) {
+        setInviteError("Invite code is required");
+        return;
+      }
+
+      setIsValidating(true);
+      setInviteError(null);
+      try {
+        const res = await fetch("/api/validate-invite-code", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: inviteCode }),
+        });
+
+        const data = await res.json();
+
+        if (!data.valid) {
+          if (data.locked) {
+            setLockoutInfo({ locked: true, retryAfter: data.retryAfter });
+            setInviteError(data.message);
+          } else {
+            setInviteError(data.message + (data.remainingAttempts !== undefined ? ` (${data.remainingAttempts} attempts remaining)` : ""));
+          }
+          return;
+        }
+
+        // Code is valid
+        setInviteCodeValidated(true);
+        setLockoutInfo(null);
+      } catch {
+        setInviteError("Failed to validate invite code. Please try again.");
+        return;
+      } finally {
+        setIsValidating(false);
+      }
+    }
+
     nextStep();
   };
 
@@ -193,6 +246,32 @@ function EmailStep() {
                 Used to associate your teams and track submissions
               </p>
             </div>
+            {showInviteCode && (
+              <div>
+                <label htmlFor="inviteCode" className="block text-sm font-medium mb-1">
+                  Invite Code
+                </label>
+                <Input
+                  id="inviteCode"
+                  type="text"
+                  placeholder="Enter your invite code"
+                  value={inviteCode}
+                  onChange={(e) => {
+                    setInviteCode(e.target.value);
+                    setInviteError(null);
+                  }}
+                  className="min-h-[44px]"
+                  aria-invalid={!!inviteError}
+                  disabled={lockoutInfo?.locked}
+                />
+                {inviteError && (
+                  <p className="text-xs text-destructive mt-1">{inviteError}</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  This is a private contest. Enter your invite code to participate.
+                </p>
+              </div>
+            )}
           </>
         )}
         <div>
@@ -221,9 +300,9 @@ function EmailStep() {
         <Button
           onClick={handleContinue}
           className="w-full min-h-[44px]"
-          disabled={!name.trim() || !email || !teamName.trim()}
+          disabled={!name.trim() || !email || !teamName.trim() || (showInviteCode && !inviteCode.trim()) || isValidating || lockoutInfo?.locked}
         >
-          Continue
+          {isValidating ? "Validating..." : "Continue"}
         </Button>
         {cart.length > 0 && (
           <Button
@@ -419,8 +498,8 @@ function ReviewStep({ golfers }: { golfers: Golfer[] }) {
       // Use batch endpoint for multiple teams, single endpoint for one
       const endpoint = teamsToSubmit.length > 1 ? "/api/submit-teams" : "/api/submit-team";
       const body = teamsToSubmit.length > 1
-        ? { email: store.email, name: store.name, teams: teamsToSubmit }
-        : { email: store.email, name: store.name, team_name: teamsToSubmit[0].team_name, golfers: teamsToSubmit[0].golfers };
+        ? { email: store.email, name: store.name, teams: teamsToSubmit, invite_code: store.inviteCode }
+        : { email: store.email, name: store.name, team_name: teamsToSubmit[0].team_name, golfers: teamsToSubmit[0].golfers, invite_code: store.inviteCode };
 
       const res = await fetch(endpoint, {
         method: "POST",

@@ -15,6 +15,10 @@ interface TeamBuilderState {
   name: string;
   /** Team name */
   teamName: string;
+  /** Invite code for private contest access */
+  inviteCode: string;
+  /** Whether the invite code has been validated this session */
+  inviteCodeValidated: boolean;
   /** Selected golfers by tier */
   selections: Map<string, TeamGolferSlot>; // keyed by golfer id
   /** Golfer IDs already used in other submitted teams (for duplicate prevention) */
@@ -28,6 +32,8 @@ interface TeamBuilderState {
   setEmail: (email: string) => void;
   setName: (name: string) => void;
   setTeamName: (name: string) => void;
+  setInviteCode: (code: string) => void;
+  setInviteCodeValidated: (validated: boolean) => void;
   setStep: (step: number) => void;
   nextStep: () => void;
   prevStep: () => void;
@@ -58,6 +64,8 @@ export const useTeamBuilderStore = create<TeamBuilderState>((set, get) => ({
   email: "",
   name: "",
   teamName: "",
+  inviteCode: "",
+  inviteCodeValidated: false,
   selections: new Map(),
   usedGolferIds: new Set(),
   submittedTeamCount: 0,
@@ -66,6 +74,8 @@ export const useTeamBuilderStore = create<TeamBuilderState>((set, get) => ({
   setEmail: (email) => set({ email }),
   setName: (name) => set({ name }),
   setTeamName: (name) => set({ teamName: name }),
+  setInviteCode: (code) => set({ inviteCode: code }),
+  setInviteCodeValidated: (validated) => set({ inviteCodeValidated: validated }),
   setStep: (step) => set({ currentStep: step }),
   nextStep: () => set((s) => ({ currentStep: Math.min(s.currentStep + 1, 5) })),
   prevStep: () => set((s) => ({ currentStep: Math.max(s.currentStep - 1, 0) })),
@@ -163,6 +173,8 @@ export const useTeamBuilderStore = create<TeamBuilderState>((set, get) => ({
       email: "",
       name: "",
       teamName: "",
+      inviteCode: "",
+      inviteCodeValidated: false,
       selections: new Map(),
       cart: [],
     }),
