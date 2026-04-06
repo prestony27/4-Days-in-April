@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
 import { Header } from "@/components/shared/header";
 import { Footer } from "@/components/shared/footer";
 import { QueryProvider } from "@/providers/query-provider";
@@ -39,6 +40,7 @@ export default function RootLayout({
           <Footer />
           <Toaster position="top-center" richColors />
         </QueryProvider>
+        <Analytics />
       </body>
     </html>
   );

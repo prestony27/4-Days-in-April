@@ -555,84 +555,84 @@
     },
     {
       "name": "Fred Couples",
-      "world_rank": null,
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": false,
       "espn_id": "91"
     },
     {
       "name": "Naoyuki Kataoka",
-      "world_rank": null,
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": false,
       "espn_id": "4837226"
     },
     {
       "name": "Angel Cabrera",
-      "world_rank": null,
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": false,
       "espn_id": "65"
     },
     {
-      "name": "Jackson Herrington",
-      "world_rank": null,
+      "name": "Jackson Herrington (a)",
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": true,
-      "espn_id": "amateur_1"
+      "espn_id": "5344766"
     },
     {
       "name": "Vijay Singh",
-      "world_rank": null,
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": false,
       "espn_id": "392"
     },
     {
-      "name": "Ethan Fang",
-      "world_rank": null,
+      "name": "Ethan Fang (a)",
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": true,
       "espn_id": "5293232"
     },
     {
-      "name": "Brandon Holtz",
-      "world_rank": null,
+      "name": "Brandon Holtz (a)",
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": true,
-      "espn_id": "amateur_2"
+      "espn_id": "2201886"
     },
     {
       "name": "Mike Weir",
-      "world_rank": null,
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": false,
       "espn_id": "453"
     },
     {
-      "name": "Fifa Laopakdee",
-      "world_rank": null,
+      "name": "Fifa Laopakdee (a)",
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": true,
       "espn_id": "5327297"
     },
     {
-      "name": "Mateo Pulcini",
-      "world_rank": null,
+      "name": "Mateo Pulcini (a)",
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": true,
-      "espn_id": "amateur_3"
+      "espn_id": "5344763"
     },
     {
       "name": "José María Olazábal",
-      "world_rank": null,
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": false,
       "espn_id": "329"
     },
     {
-      "name": "Mason Howell",
-      "world_rank": null,
+      "name": "Mason Howell (a)",
+      "world_rank": 9999,
       "tier": 4,
       "is_amateur": true,
       "espn_id": "5289811"
