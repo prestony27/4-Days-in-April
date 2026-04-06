@@ -105,13 +105,13 @@ export async function sendConfirmationEmail({
           <p style="margin: 0; font-weight: 600; color: #92400e;">Payment Instructions:</p>
           <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #6b7280;">
             <li>Send <strong>$${totalPaid}</strong> to <strong>@pyoung</strong> on Venmo</li>
-            <li>Label the payment as <strong>"Gift"</strong></li>
-            <li>Include <strong>"4DIA: ${teams.map(t => t.team_name).join(", ")}"</strong> in the note</li>
+            <li>For the note, enter <strong>"gift"</strong></li>
           </ul>
         </div>
 
         <p style="color: #6b7280; font-size: 14px;">
-          Your entry will be confirmed once we verify your payment. Entries without payment will be removed before the tournament starts.
+          We will manually verify that Venmo payments have been received.
+          Entries without payment will be removed before the tournament starts.
         </p>
 
         ${teamsHtml}
@@ -149,10 +149,9 @@ Please complete your Venmo payment to confirm your entry.
 
 PAYMENT INSTRUCTIONS:
 - Send $${totalPaid} to @pyoung on Venmo
-- Label the payment as "Gift"
-- Include "4DIA: ${teams.map(t => t.team_name).join(", ")}" in the note
+- For the note, enter "gift"
 
-Your entry will be confirmed once we verify your payment.
+We will manually verify that Venmo payments have been received.
 Entries without payment will be removed before the tournament starts.
 
 ${teams.map((team) => `

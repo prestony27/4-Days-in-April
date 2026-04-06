@@ -25,17 +25,10 @@ export default function PaymentPage() {
 function PaymentContent() {
   const searchParams = useSearchParams();
   const teamIdsParam = searchParams.get("team_ids");
-  const namesParam = searchParams.get("names");
 
   const teamIds = teamIdsParam ? teamIdsParam.split(",") : [];
-  const teamNames = namesParam ? decodeURIComponent(namesParam).split(",") : [];
   const teamCount = teamIds.length || 1;
   const totalAmount = teamCount * 30;
-
-  // Build the Venmo note suggestion
-  const noteText = teamNames.length > 0
-    ? `4DIA: ${teamNames.join(", ")}`
-    : "4DIA: [Your Team Name]";
 
   return (
     <div className="mx-auto max-w-lg px-4 py-16">
@@ -110,17 +103,13 @@ function PaymentContent() {
           <div className="flex items-start gap-3">
             <Badge variant="outline" className="shrink-0 mt-0.5">2</Badge>
             <div>
-              <p className="font-medium">Enter ${totalAmount} and select &quot;Gift&quot;</p>
-              <p className="text-sm text-muted-foreground">Make sure to label the payment as a gift</p>
+              <p className="font-medium">Enter ${totalAmount}</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Badge variant="outline" className="shrink-0 mt-0.5">3</Badge>
             <div>
-              <p className="font-medium">Add your team name(s) in the note</p>
-              <p className="text-sm text-muted-foreground">
-                Suggested note: <span className="font-mono bg-muted px-1 rounded">{noteText}</span>
-              </p>
+              <p className="font-medium">For the note, enter &quot;4DIA&quot;</p>
             </div>
           </div>
         </CardContent>
@@ -129,7 +118,8 @@ function PaymentContent() {
       {/* Important Notice */}
       <div className="bg-muted/50 rounded-lg p-4 mb-6">
         <p className="text-sm text-muted-foreground">
-          <strong>Important:</strong> Your entry will be confirmed once we verify your Venmo payment.
+          <strong>Important:</strong> A confirmation email will be sent with your team details.
+          We will manually verify that Venmo payments have been received.
           Entries without payment will be removed before the tournament starts.
         </p>
       </div>
