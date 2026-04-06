@@ -19,6 +19,7 @@ interface Team {
   id: string;
   team_name: string;
   contestant_name: string | null;
+  payment_status: string;
   golfers: Golfer[];
 }
 
@@ -43,7 +44,6 @@ function SuccessContent() {
 
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
 
   // Parse team IDs from URL params
   const teamIds = teamIdsParam
@@ -60,7 +60,6 @@ function SuccessContent() {
 
     const fetchTeams = async () => {
       const fetchedTeams: Team[] = [];
-      let allFound = true;
 
       for (const id of teamIds) {
         try {
@@ -68,39 +67,29 @@ function SuccessContent() {
           if (res.ok) {
             const data = await res.json();
             fetchedTeams.push(data);
-          } else {
-            // Team not found (possibly webhook hasn't processed yet)
-            allFound = false;
           }
         } catch {
-          allFound = false;
+          // Ignore fetch errors
         }
       }
 
-      if (fetchedTeams.length > 0) {
-        setTeams(fetchedTeams);
-      }
-
-      // If not all teams found and we haven't retried too many times, retry
-      if (!allFound && retryCount < 5) {
-        setTimeout(() => setRetryCount((c) => c + 1), 2000);
-      } else {
-        setLoading(false);
-      }
+      setTeams(fetchedTeams);
+      setLoading(false);
     };
 
     fetchTeams();
-  }, [teamIds.join(","), retryCount]);
+  }, [teamIds.join(",")]);
 
-  const totalPaid = teams.length * 30;
+  const totalAmount = teams.length * 30;
+  const isPending = teams.some(t => t.payment_status === "pending");
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-16">
       {/* Success Header */}
       <div className="text-center mb-8">
-        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4">
+        <div className={`flex items-center justify-center w-16 h-16 rounded-full mx-auto mb-4 ${isPending ? "bg-amber-100" : "bg-primary/10"}`}>
           <svg
-            className="w-8 h-8 text-primary"
+            className={`w-8 h-8 ${isPending ? "text-amber-600" : "text-primary"}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -117,8 +106,9 @@ function SuccessContent() {
           {teams.length > 1 ? `${teams.length} Teams Submitted!` : "Team Submitted!"}
         </h1>
         <p className="text-muted-foreground">
-          Your payment has been confirmed and your {teams.length > 1 ? "teams are" : "team is"} locked in.
-          Good luck in the tournament!
+          {isPending
+            ? `Your ${teams.length > 1 ? "entries have" : "entry has"} been received. Please complete your Venmo payment to confirm.`
+            : `Your ${teams.length > 1 ? "teams are" : "team is"} locked in. Good luck in the tournament!`}
         </p>
       </div>
 
@@ -163,17 +153,38 @@ function SuccessContent() {
           ))}
 
           {/* Payment Summary */}
-          <Card className="bg-muted/50">
+          <Card className={isPending ? "bg-amber-50 border-amber-200" : "bg-muted/50"}>
             <CardContent className="py-4">
               <div className="flex justify-between items-center">
-                <span className="font-medium">Total Paid</span>
-                <span className="font-bold text-lg">${totalPaid}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{isPending ? "Amount Due" : "Total Paid"}</span>
+                  {isPending && (
+                    <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
+                      Payment Pending
+                    </Badge>
+                  )}
+                </div>
+                <span className="font-bold text-lg">${totalAmount}</span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {teams.length} team{teams.length > 1 ? "s" : ""} × $30
+                {teams.length} team{teams.length > 1 ? "s" : ""} x $30
               </p>
             </CardContent>
           </Card>
+
+          {/* Venmo Reminder for pending payments */}
+          {isPending && (
+            <Card className="border-amber-200">
+              <CardContent className="py-4">
+                <p className="text-sm font-medium mb-2">Complete your payment via Venmo:</p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>Send ${totalAmount} to <strong>@pyoung</strong></li>
+                  <li>Label payment as <strong>&quot;Gift&quot;</strong></li>
+                  <li>Include your team name(s) in the note</li>
+                </ul>
+              </CardContent>
+            </Card>
+          )}
         </div>
       ) : (
         <Card className="mb-6">

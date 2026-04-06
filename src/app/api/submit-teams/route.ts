@@ -1,11 +1,11 @@
 /**
- * POST /api/submit-teams - Batch submit multiple teams with single Stripe Checkout
+ * POST /api/submit-teams - Batch submit multiple teams
  *
  * Rate limited: 5/minute per IP
+ * Payment is handled manually via Venmo (no Stripe integration)
  */
 
 import { NextRequest } from "next/server";
-import Stripe from "stripe";
 import { getSupabase } from "@/lib/db";
 import { TABLE_CONTESTANTS, TABLE_TEAMS, TABLE_GOLFERS, TIER_GOLFER_COLS } from "@/lib/schema";
 import {
@@ -29,19 +29,6 @@ import {
 import type { Tier } from "@/types";
 
 export const runtime = "nodejs";
-
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
-const ENTRY_FEE_CENTS = 3000; // $30.00
-
-let _stripe: Stripe | null = null;
-function getStripe(): Stripe {
-  if (!_stripe) {
-    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-      apiVersion: "2025-03-31.basil",
-    });
-  }
-  return _stripe;
-}
 
 interface TeamInput {
   team_name: string;
@@ -279,12 +266,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Clean up any existing pending teams
-  await db
-    .from(TABLE_TEAMS)
-    .delete()
-    .eq("contestant_id", contestantId)
-    .eq("payment_status", "pending");
+  // NOTE: Pending teams are NOT deleted - they persist until manual payment verification
+  // This allows users to submit and pay via Venmo without losing their entry
 
   // Insert all teams
   const teamIds: string[] = [];
@@ -339,50 +322,10 @@ export async function POST(request: NextRequest) {
     teamIds.push(insertedTeam.id);
   }
 
-  // Create Stripe Checkout Session with multiple line items
-  let session: Stripe.Checkout.Session;
-  try {
-    session = await getStripe().checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: body.teams.map((team, index) => ({
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: `4 Days in April Contest Entry: ${team.team_name}`,
-            description: `Team ${index + 1} of ${body.teams.length} for ${body.name}`,
-          },
-          unit_amount: ENTRY_FEE_CENTS,
-        },
-        quantity: 1,
-      })),
-      mode: "payment",
-      success_url: `${FRONTEND_URL}/submit/success?team_ids=${teamIds.join(",")}`,
-      cancel_url: `${FRONTEND_URL}/teams/builder?cancelled=true`,
-      client_reference_id: teamIds[0],
-      customer_email: email,
-      metadata: {
-        team_ids: teamIds.join(","),
-        contestant_id: contestantId,
-      },
-    });
-  } catch (error) {
-    await db.from(TABLE_TEAMS).delete().in("id", teamIds);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Stripe error:", message);
-    return Response.json(
-      { detail: `Payment service error: ${message}` },
-      { status: 502 }
-    );
-  }
-
-  // Store Stripe session ID on all teams
-  await db
-    .from(TABLE_TEAMS)
-    .update({ payment_id: session.id })
-    .in("id", teamIds);
-
+  // Return team info for redirect to Venmo payment page
   return Response.json({
     team_ids: teamIds,
-    payment_url: session.url,
+    team_names: body.teams.map(t => t.team_name),
+    email: email,
   });
 }

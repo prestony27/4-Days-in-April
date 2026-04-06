@@ -1,5 +1,8 @@
 /**
- * GET /api/teams/[id] - Get a single team by ID (completed teams only)
+ * GET /api/teams/[id] - Get a single team by ID
+ *
+ * Returns teams regardless of payment status (pending teams are now allowed
+ * since payment verification is manual via Venmo)
  */
 
 import { NextRequest } from "next/server";
@@ -14,12 +17,11 @@ export async function GET(
 
   const db = getSupabase();
 
-  // Fetch team with contestant name
+  // Fetch team with contestant name (includes pending teams for Venmo payment flow)
   const { data: teamData, error: teamError } = await db
     .from(TABLE_TEAMS)
     .select("*, contestants(name, email)")
     .eq("id", id)
-    .eq("payment_status", "completed")
     .single();
 
   if (teamError || !teamData) {

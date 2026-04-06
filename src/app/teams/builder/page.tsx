@@ -515,12 +515,10 @@ function ReviewStep({ golfers }: { golfers: Golfer[] }) {
       }
 
       const data = await res.json();
-      if (data.payment_url) {
-        window.location.href = data.payment_url;
-      } else {
-        const teamId = data.team_id || data.team_ids?.[0];
-        window.location.href = `/submit?team_id=${teamId}`;
-      }
+      // Redirect to Venmo payment page with team info
+      const teamIds = data.team_ids?.join(",") || data.team_id;
+      const teamNames = data.team_names?.join(",") || data.team_name;
+      window.location.href = `/submit/payment?team_ids=${teamIds}&names=${encodeURIComponent(teamNames)}`;
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -630,8 +628,8 @@ function ReviewStep({ golfers }: { golfers: Golfer[] }) {
             {isSubmitting
               ? "Submitting..."
               : totalTeams > 1
-                ? `Checkout ${totalTeams} Teams - $${totalPrice}`
-                : `Submit & Pay $${totalPrice}`}
+                ? `Submit ${totalTeams} Teams - $${totalPrice}`
+                : `Submit Entry - $${totalPrice}`}
           </Button>
         </div>
       </div>

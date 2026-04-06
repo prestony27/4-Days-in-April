@@ -35,7 +35,7 @@ export default function SubmitPage() {
             <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
               <li>Build your team of 5 golfers across 4 tiers</li>
               <li>Review your picks and submit</li>
-              <li>Complete $30 payment via Stripe</li>
+              <li>Pay $30 via Venmo to @pyoung</li>
               <li>Track your team on the live leaderboard</li>
             </ol>
           </div>
@@ -45,8 +45,8 @@ export default function SubmitPage() {
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            Secure payment processed by Stripe. Your team is only active after
-            payment is confirmed.
+            Payment via Venmo to @pyoung. Your entry will be confirmed after
+            payment is verified.
           </p>
         </CardContent>
       </Card>

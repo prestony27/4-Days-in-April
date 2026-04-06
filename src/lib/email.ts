@@ -42,8 +42,8 @@ export async function sendConfirmationEmail({
 
   const teamCount = teams.length;
   const subject = teamCount > 1
-    ? `Confirmed: Your ${teamCount} Contest Entries`
-    : `Confirmed: Your Contest Entry`;
+    ? `Submitted: Your ${teamCount} Contest Entries - Payment Pending`
+    : `Submitted: Your Contest Entry - Payment Pending`;
 
   const teamsHtml = teams.map((team) => {
     const golferRows = team.golfers
@@ -88,9 +88,9 @@ export async function sendConfirmationEmail({
           <p style="color: #6b7280; margin: 8px 0 0 0;">2026 Contest</p>
         </div>
 
-        <div style="background: #ecfdf5; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
-          <p style="margin: 0; color: #065f46; font-size: 18px; font-weight: 600;">
-            Payment Confirmed!
+        <div style="background: #fef3c7; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
+          <p style="margin: 0; color: #92400e; font-size: 18px; font-weight: 600;">
+            Entry Submitted - Payment Required
           </p>
         </div>
 
@@ -98,15 +98,28 @@ export async function sendConfirmationEmail({
 
         <p>
           Your ${teamCount > 1 ? `${teamCount} entries have` : "entry has"} been submitted for the 4 Days in April 2026 Contest.
-          Here's your confirmation:
+          <strong>Please complete your Venmo payment to confirm your entry.</strong>
+        </p>
+
+        <div style="background: #fef3c7; border-radius: 8px; padding: 16px; margin: 24px 0;">
+          <p style="margin: 0; font-weight: 600; color: #92400e;">Payment Instructions:</p>
+          <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #6b7280;">
+            <li>Send <strong>$${totalPaid}</strong> to <strong>@pyoung</strong> on Venmo</li>
+            <li>Label the payment as <strong>"Gift"</strong></li>
+            <li>Include <strong>"4DIA: ${teams.map(t => t.team_name).join(", ")}"</strong> in the note</li>
+          </ul>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px;">
+          Your entry will be confirmed once we verify your payment. Entries without payment will be removed before the tournament starts.
         </p>
 
         ${teamsHtml}
 
         <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin: 24px 0;">
-          <p style="margin: 0; font-weight: 500;">Payment Summary</p>
+          <p style="margin: 0; font-weight: 500;">Amount Due</p>
           <p style="margin: 8px 0 0 0; color: #6b7280;">
-            ${teamCount} team${teamCount > 1 ? "s" : ""} × $30 = <strong>$${totalPaid}</strong>
+            ${teamCount} team${teamCount > 1 ? "s" : ""} x $30 = <strong>$${totalPaid}</strong>
           </p>
         </div>
 
@@ -127,11 +140,20 @@ export async function sendConfirmationEmail({
 
   const text = `
 Four Days in April 2026 Contest
-Payment Confirmed!
+Entry Submitted - Payment Required
 
 Hi ${contestantName},
 
 Your ${teamCount > 1 ? `${teamCount} entries have` : "entry has"} been submitted for the 4 Days in April 2026 Contest.
+Please complete your Venmo payment to confirm your entry.
+
+PAYMENT INSTRUCTIONS:
+- Send $${totalPaid} to @pyoung on Venmo
+- Label the payment as "Gift"
+- Include "4DIA: ${teams.map(t => t.team_name).join(", ")}" in the note
+
+Your entry will be confirmed once we verify your payment.
+Entries without payment will be removed before the tournament starts.
 
 ${teams.map((team) => `
 ${team.team_name}
@@ -141,7 +163,7 @@ ${team.golfers
   .join("\n")}
 `).join("\n")}
 
-Payment Summary: ${teamCount} team${teamCount > 1 ? "s" : ""} × $30 = $${totalPaid}
+Amount Due: ${teamCount} team${teamCount > 1 ? "s" : ""} x $30 = $${totalPaid}
 
 Track your team: https://4-days-in-april.vercel.app/leaderboard
 
