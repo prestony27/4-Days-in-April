@@ -163,6 +163,7 @@ async function loadContestantNames(contestantIds: string[]): Promise<Map<string,
 
 /**
  * Get the ranked leaderboard with full team and golfer details.
+ * Uses pre-computed rankings for efficient database-level pagination.
  */
 export async function getLeaderboard(
   limit: number = 50,
@@ -172,52 +173,101 @@ export async function getLeaderboard(
   total: number;
   lastUpdated: string | null;
 }> {
-  // Load all data in parallel
-  const [golferScores, golfersFull, teamRows, tournamentState] = await Promise.all([
-    loadGolferScores(),
-    loadGolfersFull(),
-    loadCompletedTeams(),
+  const db = getSupabase();
+
+  // Get total count and last updated in parallel
+  const [countResult, tournamentState] = await Promise.all([
+    db
+      .from(TABLE_TEAMS)
+      .select("id", { count: "exact", head: true })
+      .eq("payment_status", "completed"),
     getTournamentLastUpdated(),
   ]);
 
-  // Convert teams to scoring format and rank them
-  const teamsForScoring = teamRows.map(teamRowToScoringFormat);
-  const rankedTeams = rankTeams(teamsForScoring, golferScores);
+  const total = countResult.count ?? 0;
 
-  // Load contestant names
+  // Get paginated teams using pre-computed rank (from DB)
+  const { data: teamRows, error: teamsError } = await db
+    .from(TABLE_TEAMS)
+    .select(`
+      id, team_name, total_score, status, contestant_id, rank,
+      tier1_golfer_id, tier2a_golfer_id, tier2b_golfer_id,
+      tier3_golfer_id, tier4_golfer_id
+    `)
+    .eq("payment_status", "completed")
+    .order("rank", { nullsFirst: false })
+    .order("total_score", { nullsFirst: false })
+    .range(offset, offset + limit - 1);
+
+  if (teamsError) {
+    throw new Error(`Failed to load teams: ${teamsError.message}`);
+  }
+
+  if (!teamRows || teamRows.length === 0) {
+    return { teams: [], total, lastUpdated: tournamentState };
+  }
+
+  // Collect golfer IDs only for the paginated teams
+  const golferIds = new Set<string>();
+  for (const team of teamRows) {
+    for (const col of TIER_GOLFER_COLS) {
+      const gid = team[col as keyof typeof team] as string | null;
+      if (gid) golferIds.add(gid);
+    }
+  }
+
+  // Collect contestant IDs for name lookup
   const contestantIds = [...new Set(teamRows.map((t) => t.contestant_id))];
-  const contestantNames = await loadContestantNames(contestantIds);
 
-  // Create a map of team row data by ID
-  const teamRowMap = new Map(teamRows.map((t) => [t.id, t]));
+  // Load golfers and contestants in parallel
+  const [golfersResult, contestantNames] = await Promise.all([
+    db
+      .from(TABLE_GOLFERS)
+      .select("id, name, world_rank, tier, score_to_par, thru, status, round_scores")
+      .in("id", Array.from(golferIds)),
+    loadContestantNames(contestantIds),
+  ]);
 
-  // Build leaderboard response with pagination
-  const paginatedTeams = rankedTeams.slice(offset, offset + limit);
+  const golferMap = new Map<string, GolferRow>();
+  for (const g of golfersResult.data || []) {
+    golferMap.set(g.id, g as GolferRow);
+  }
 
-  const leaderboardTeams: LeaderboardTeam[] = paginatedTeams.map((scored) => {
-    const teamRow = teamRowMap.get(scored.team.id)!;
+  // Build leaderboard response
+  const leaderboardTeams: LeaderboardTeam[] = teamRows.map((teamRow) => {
     const contestantName = contestantNames.get(teamRow.contestant_id) || "Unknown";
 
-    // Build golfer details
-    const golfers: LeaderboardGolfer[] = scored.team.golfers.map((slot) => {
-      const golfer = golfersFull.get(slot.golfer_id);
+    // Build golfer details with tier assignment
+    const tierAssignments: Array<{ col: string; tier: Tier }> = [
+      { col: "tier1_golfer_id", tier: 1 },
+      { col: "tier2a_golfer_id", tier: 2 },
+      { col: "tier2b_golfer_id", tier: 2 },
+      { col: "tier3_golfer_id", tier: 3 },
+      { col: "tier4_golfer_id", tier: 4 },
+    ];
+
+    const golfers: LeaderboardGolfer[] = tierAssignments.map(({ col, tier }) => {
+      const golferId = teamRow[col as keyof typeof teamRow] as string;
+      const golfer = golferMap.get(golferId);
+
       if (!golfer) {
         return {
-          id: slot.golfer_id,
+          id: golferId,
           name: "Unknown",
           world_rank: null,
-          tier: slot.tier,
+          tier,
           score_to_par: null,
           thru: null,
-          status: "STATUS_IN_PROGRESS",
+          status: "STATUS_IN_PROGRESS" as GolferStatus,
           round_scores: [],
         };
       }
+
       return {
         id: golfer.id,
         name: golfer.name,
         world_rank: golfer.world_rank,
-        tier: golfer.tier,
+        tier: golfer.tier as Tier,
         score_to_par: golfer.score_to_par,
         thru: golfer.thru,
         status: golfer.status,
@@ -226,19 +276,19 @@ export async function getLeaderboard(
     });
 
     return {
-      rank: scored.rank ?? 0,
-      team_id: scored.team.id,
+      rank: teamRow.rank ?? 0,
+      team_id: teamRow.id,
       team_name: teamRow.team_name,
       contestant_name: contestantName,
-      total_score: scored.totalScore,
-      status: scored.isDisqualified ? "disqualified" : "active",
+      total_score: teamRow.total_score,
+      status: teamRow.status as "active" | "disqualified",
       golfers,
     };
   });
 
   return {
     teams: leaderboardTeams,
-    total: rankedTeams.length,
+    total,
     lastUpdated: tournamentState,
   };
 }
@@ -259,6 +309,20 @@ async function getTournamentLastUpdated(): Promise<string | null> {
   }
 
   return data.last_score_update;
+}
+
+/**
+ * Update pre-computed rankings for all completed teams.
+ * Calls the PostgreSQL function that uses window functions for efficient ranking.
+ */
+export async function updateTeamRankings(): Promise<void> {
+  const db = getSupabase();
+  const { error } = await db.rpc("update_team_rankings");
+
+  if (error) {
+    console.error(`Failed to update team rankings: ${error.message}`);
+    throw new Error(`Failed to update team rankings: ${error.message}`);
+  }
 }
 
 /**

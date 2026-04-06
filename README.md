@@ -458,6 +458,82 @@ tier1_golfer_id, tier2a_golfer_id, tier2b_golfer_id, tier3_golfer_id, tier4_golf
 3. Use the service role key for backend access (not the anon key)
 4. Initialize tournament_state with `id = true` row
 
+## Scaling for High Traffic
+
+This section documents the scalability configurations for handling 3,000+ concurrent users.
+
+### Upstash Redis (Distributed Rate Limiting)
+
+The app uses Upstash Redis for distributed rate limiting across serverless instances.
+
+**Setup:**
+1. Create an Upstash account at [upstash.com](https://upstash.com)
+2. Create a new Redis database (free tier: 10,000 requests/day)
+3. Add environment variables to Vercel:
+   - `UPSTASH_REDIS_REST_URL` - Your Upstash REST URL
+   - `UPSTASH_REDIS_REST_TOKEN` - Your Upstash REST token
+
+**Rate Limits:**
+| Endpoint | Limit | Window |
+|----------|-------|--------|
+| `/api/submit-team` | 5 requests | 1 minute |
+| `/api/submit-teams` | 5 requests | 1 minute |
+| `/api/my-teams` | 15 requests | 1 minute |
+| Invite code validation | 5 failed attempts | 15-minute lockout |
+
+**Why distributed rate limiting?** In-memory rate limiting resets on cold starts and is per-instance. With 100+ serverless instances under load, users could bypass limits. Redis provides a single source of truth across all instances.
+
+### Supabase Connection Pooling
+
+Enable connection pooling for high-concurrency database access.
+
+**Setup:**
+1. Go to Supabase Dashboard > Settings > Database
+2. Under "Connection pooling", enable **Transaction mode**
+3. Copy the pooler connection string (uses port 6543)
+4. Add `SUPABASE_POOLER_URL` to Vercel environment variables
+
+**Why?** Without pooling, each serverless function opens a new PostgreSQL connection. With 3,000 concurrent users, this exhausts connection limits (default: 60-100). Connection pooling reuses connections efficiently.
+
+### Database Constraints
+
+The app uses database-level triggers to prevent race conditions:
+
+1. **Max 3 teams trigger** (`enforce_max_completed_teams`): Prevents more than 3 completed teams per contestant. Fires when `payment_status` changes to `completed`.
+
+2. **Duplicate golfer trigger** (`enforce_no_duplicate_golfers`): Prevents the same golfer appearing on multiple completed teams for one contestant.
+
+**Why triggers instead of app-level checks?** Race conditions occur when two concurrent requests both pass validation before either completes payment. Only database triggers execute atomically with the update.
+
+### Pre-computed Leaderboard Rankings
+
+Rankings are pre-computed in PostgreSQL rather than calculated in JavaScript:
+
+- **Migration:** `003_leaderboard_ranking.sql` adds `rank`, `tier4_score`, `tier2_combined_score` columns
+- **Function:** `update_team_rankings()` uses PostgreSQL window functions for efficient ranking
+- **Cron:** Rankings are recalculated after each score update
+
+**Performance improvement:** 
+- Before: Load all 3,000+ teams into memory, sort in JS, then paginate
+- After: Query 50 teams with `ORDER BY rank LIMIT OFFSET`
+
+### Environment Variables Reference
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_POOLER_URL` | Recommended | Supabase connection pooler URL (port 6543) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key for admin access |
+| `UPSTASH_REDIS_REST_URL` | Yes | Upstash Redis REST URL |
+| `UPSTASH_REDIS_REST_TOKEN` | Yes | Upstash Redis REST token |
+| `STRIPE_SECRET_KEY` | Yes | Stripe API secret key |
+| `STRIPE_WEBHOOK_SECRET` | Yes | Stripe webhook signing secret |
+| `RESEND_API_KEY` | Yes | Resend API key for emails |
+| `FRONTEND_URL` | Yes | Frontend URL for redirects |
+| `ADMIN_API_KEY` | Yes | Admin API authentication |
+| `CRON_SECRET` | Yes | Cron job authentication |
+| `INVITE_CODES` | Yes | JSON array of valid invite codes |
+
 ## Contest Rules Summary
 
 1. Pick 5 golfers: 1 from ranks 1-10, 2 from 11-30, 1 from 31-50, 1 from 51+

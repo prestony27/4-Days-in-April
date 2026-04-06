@@ -4,38 +4,16 @@
  * Valid codes are stored in the INVITE_CODES environment variable as a JSON array.
  * Example: INVITE_CODES=["OGNoahBaker","AnotherCode"]
  *
- * Includes lockout mechanism after 5 failed attempts (15-minute window).
+ * Includes distributed lockout mechanism after 5 failed attempts (15-minute window)
+ * using Upstash Redis for consistency across serverless instances.
  */
 
 import { timingSafeEqual } from "crypto";
+import { getRedis } from "./redis";
 
 // Lockout configuration
 const MAX_ATTEMPTS = 5;
-const LOCKOUT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-
-// In-memory store for failed attempts (matches rate-limit.ts pattern)
-interface LockoutEntry {
-  count: number;
-  resetAt: number;
-}
-
-const lockoutStore = new Map<string, LockoutEntry>();
-
-// Periodic cleanup to prevent memory leaks
-const CLEANUP_INTERVAL = 60 * 1000; // 1 minute
-let lastCleanup = Date.now();
-
-function cleanup() {
-  const now = Date.now();
-  if (now - lastCleanup < CLEANUP_INTERVAL) return;
-
-  lastCleanup = now;
-  for (const [key, entry] of lockoutStore.entries()) {
-    if (entry.resetAt < now) {
-      lockoutStore.delete(key);
-    }
-  }
-}
+const LOCKOUT_WINDOW_SEC = 15 * 60; // 15 minutes in seconds
 
 /**
  * Parse valid invite codes from environment variable.
@@ -107,68 +85,67 @@ export function validateInviteCode(
 
 /**
  * Check if an IP is locked out from invite code attempts.
+ * Uses Redis for distributed state across serverless instances.
  * @returns { locked: false } or { locked: true, retryAfter: number }
  */
-export function checkInviteCodeLockout(
+export async function checkInviteCodeLockout(
   ip: string
-): { locked: false } | { locked: true; retryAfter: number } {
-  cleanup();
+): Promise<{ locked: false } | { locked: true; retryAfter: number }> {
+  const redis = getRedis();
+  const key = `invite-lockout:${ip}`;
 
-  const now = Date.now();
-  const key = `invite-code:${ip}`;
-  const entry = lockoutStore.get(key);
+  const [count, ttl] = await Promise.all([
+    redis.get<number>(key),
+    redis.ttl(key),
+  ]);
 
-  if (!entry || entry.resetAt < now) {
+  if (count === null || count < MAX_ATTEMPTS) {
     return { locked: false };
   }
 
-  if (entry.count >= MAX_ATTEMPTS) {
-    const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
-    return { locked: true, retryAfter };
-  }
-
-  return { locked: false };
+  // User is locked out
+  const retryAfter = ttl > 0 ? ttl : LOCKOUT_WINDOW_SEC;
+  return { locked: true, retryAfter };
 }
 
 /**
  * Record a failed invite code attempt.
+ * Uses Redis INCR with EXPIRE for atomic increment-with-TTL.
  */
-export function recordFailedAttempt(ip: string): void {
-  cleanup();
+export async function recordFailedAttempt(ip: string): Promise<void> {
+  const redis = getRedis();
+  const key = `invite-lockout:${ip}`;
 
-  const now = Date.now();
-  const key = `invite-code:${ip}`;
-  const entry = lockoutStore.get(key);
+  // Increment count atomically
+  const count = await redis.incr(key);
 
-  if (!entry || entry.resetAt < now) {
-    // New window
-    lockoutStore.set(key, { count: 1, resetAt: now + LOCKOUT_WINDOW_MS });
-  } else {
-    entry.count++;
+  // Set TTL only on first attempt (when count becomes 1)
+  if (count === 1) {
+    await redis.expire(key, LOCKOUT_WINDOW_SEC);
   }
 }
 
 /**
  * Clear failed attempts for an IP (call on successful validation).
  */
-export function clearFailedAttempts(ip: string): void {
-  const key = `invite-code:${ip}`;
-  lockoutStore.delete(key);
+export async function clearFailedAttempts(ip: string): Promise<void> {
+  const redis = getRedis();
+  const key = `invite-lockout:${ip}`;
+  await redis.del(key);
 }
 
 /**
  * Get the number of remaining attempts before lockout.
  */
-export function getRemainingAttempts(ip: string): number {
-  cleanup();
+export async function getRemainingAttempts(ip: string): Promise<number> {
+  const redis = getRedis();
+  const key = `invite-lockout:${ip}`;
 
-  const now = Date.now();
-  const key = `invite-code:${ip}`;
-  const entry = lockoutStore.get(key);
+  const count = await redis.get<number>(key);
 
-  if (!entry || entry.resetAt < now) {
+  if (count === null) {
     return MAX_ATTEMPTS;
   }
 
-  return Math.max(0, MAX_ATTEMPTS - entry.count);
+  return Math.max(0, MAX_ATTEMPTS - count);
 }

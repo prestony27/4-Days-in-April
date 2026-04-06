@@ -1,68 +1,60 @@
 /**
- * Simple in-memory rate limiter for serverless functions.
+ * Distributed rate limiter using Upstash Redis.
  *
- * Note: This is per-instance and will reset on cold starts.
- * For production at scale, consider @upstash/ratelimit with Redis.
+ * This provides consistent rate limiting across all serverless instances,
+ * unlike in-memory rate limiting which resets on cold starts.
  *
- * This preserves the current FastAPI rate limiting behavior:
+ * Rate limits:
  * - submit-team: 5/minute
  * - my-teams: 15/minute
  * - 429 response: { "detail": "Too many requests. Please try again later." }
  */
 
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
+import { Ratelimit } from "@upstash/ratelimit";
+import { getRedis } from "./redis";
 
-const store = new Map<string, RateLimitEntry>();
+// Cache rate limiter instances by configuration
+const rateLimiters = new Map<string, Ratelimit>();
 
-// Clean up old entries periodically to prevent memory leaks
-const CLEANUP_INTERVAL = 60 * 1000; // 1 minute
-let lastCleanup = Date.now();
+function getRateLimiter(limit: number, windowSec: number): Ratelimit {
+  const key = `${limit}:${windowSec}`;
+  let limiter = rateLimiters.get(key);
 
-function cleanup() {
-  const now = Date.now();
-  if (now - lastCleanup < CLEANUP_INTERVAL) return;
-
-  lastCleanup = now;
-  for (const [key, entry] of store.entries()) {
-    if (entry.resetAt < now) {
-      store.delete(key);
-    }
+  if (!limiter) {
+    limiter = new Ratelimit({
+      redis: getRedis(),
+      limiter: Ratelimit.slidingWindow(limit, `${windowSec} s`),
+      prefix: "ratelimit",
+    });
+    rateLimiters.set(key, limiter);
   }
+
+  return limiter;
 }
 
 /**
  * Check if a request is rate limited.
- * @param key - Unique identifier (typically IP address)
+ * @param key - Unique identifier (typically "endpoint:ip")
  * @param limit - Maximum requests allowed in the window
  * @param windowMs - Time window in milliseconds (default: 60000 = 1 minute)
  * @returns { limited: false } if allowed, or { limited: true, retryAfter: number } if blocked
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   key: string,
   limit: number,
   windowMs: number = 60 * 1000
-): { limited: false } | { limited: true; retryAfter: number } {
-  cleanup();
+): Promise<{ limited: false } | { limited: true; retryAfter: number }> {
+  const windowSec = Math.ceil(windowMs / 1000);
+  const limiter = getRateLimiter(limit, windowSec);
 
-  const now = Date.now();
-  const entry = store.get(key);
+  const { success, reset } = await limiter.limit(key);
 
-  if (!entry || entry.resetAt < now) {
-    // New window
-    store.set(key, { count: 1, resetAt: now + windowMs });
+  if (success) {
     return { limited: false };
   }
 
-  if (entry.count >= limit) {
-    const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
-    return { limited: true, retryAfter };
-  }
-
-  entry.count++;
-  return { limited: false };
+  const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+  return { limited: true, retryAfter: Math.max(1, retryAfter) };
 }
 
 /**
@@ -94,8 +86,8 @@ export function rateLimitResponse(): Response {
   );
 }
 
-// Rate limit configurations matching Python backend
+// Rate limit configurations
 export const RATE_LIMITS = {
-  submitTeam: { limit: 5, windowMs: 60 * 1000 },   // 5/minute
-  myTeams: { limit: 15, windowMs: 60 * 1000 },     // 15/minute
+  submitTeam: { limit: 5, windowMs: 60 * 1000 }, // 5/minute
+  myTeams: { limit: 15, windowMs: 60 * 1000 }, // 15/minute
 } as const;

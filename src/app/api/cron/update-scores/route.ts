@@ -20,7 +20,7 @@ import {
   canFetchESPN,
   recordESPNFetch,
 } from "@/lib/espn-client";
-import { recalculateAllTeams } from "@/lib/score-pipeline";
+import { recalculateAllTeams, updateTeamRankings } from "@/lib/score-pipeline";
 
 async function handleUpdateScores(request: NextRequest) {
   // Verify authorization
@@ -105,6 +105,9 @@ async function handleUpdateScores(request: NextRequest) {
 
   // Recalculate team scores using shared pipeline
   const teamsUpdated = await recalculateAllTeams();
+
+  // Update pre-computed rankings for efficient leaderboard pagination
+  await updateTeamRankings();
 
   return Response.json({
     golfers_updated: updatedCount,

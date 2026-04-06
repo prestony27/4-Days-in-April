@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
 
   // Check lockout status first
-  const lockoutStatus = checkInviteCodeLockout(ip);
+  const lockoutStatus = await checkInviteCodeLockout(ip);
   if (lockoutStatus.locked) {
     const minutes = Math.ceil(lockoutStatus.retryAfter / 60);
     return Response.json(
@@ -55,16 +55,16 @@ export async function POST(request: NextRequest) {
 
   if (result.valid) {
     // Clear any previous failed attempts
-    clearFailedAttempts(ip);
+    await clearFailedAttempts(ip);
     return Response.json({ valid: true });
   }
 
   // Record failed attempt
-  recordFailedAttempt(ip);
-  const remaining = getRemainingAttempts(ip);
+  await recordFailedAttempt(ip);
+  const remaining = await getRemainingAttempts(ip);
 
   // Check if now locked out
-  const newLockoutStatus = checkInviteCodeLockout(ip);
+  const newLockoutStatus = await checkInviteCodeLockout(ip);
   if (newLockoutStatus.locked) {
     const minutes = Math.ceil(newLockoutStatus.retryAfter / 60);
     return Response.json(

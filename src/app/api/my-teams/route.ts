@@ -10,7 +10,7 @@ import { checkRateLimit, getClientIp, rateLimitResponse, RATE_LIMITS } from "@/l
 export async function GET(request: NextRequest) {
   // Rate limiting: 15/minute
   const ip = getClientIp(request);
-  const rateCheck = checkRateLimit(`my-teams:${ip}`, RATE_LIMITS.myTeams.limit, RATE_LIMITS.myTeams.windowMs);
+  const rateCheck = await checkRateLimit(`my-teams:${ip}`, RATE_LIMITS.myTeams.limit, RATE_LIMITS.myTeams.windowMs);
   if (rateCheck.limited) {
     return rateLimitResponse();
   }

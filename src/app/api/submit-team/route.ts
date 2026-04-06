@@ -50,7 +50,7 @@ interface SubmitTeamRequest {
 export async function POST(request: NextRequest) {
   // Rate limiting: 5/minute
   const ip = getClientIp(request);
-  const rateCheck = checkRateLimit(
+  const rateCheck = await checkRateLimit(
     `submit-team:${ip}`,
     RATE_LIMITS.submitTeam.limit,
     RATE_LIMITS.submitTeam.windowMs
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Check invite code lockout status
-  const lockoutStatus = checkInviteCodeLockout(ip);
+  const lockoutStatus = await checkInviteCodeLockout(ip);
   if (lockoutStatus.locked) {
     const minutes = Math.ceil(lockoutStatus.retryAfter / 60);
     return Response.json(
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
   const inviteResult = validateInviteCode(body.invite_code);
   if (!inviteResult.valid) {
-    recordFailedAttempt(ip);
+    await recordFailedAttempt(ip);
     return Response.json(
       { detail: { message: inviteResult.message, field: "invite_code" } },
       { status: 422 }
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Clear failed attempts on successful validation
-  clearFailedAttempts(ip);
+  await clearFailedAttempts(ip);
 
   // Basic field validation
   if (!body.email || typeof body.email !== "string") {

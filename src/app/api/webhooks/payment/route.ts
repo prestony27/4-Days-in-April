@@ -81,12 +81,12 @@ export async function POST(request: NextRequest) {
       // Idempotency: only update if not already completed (Stripe retries for 72h)
       const { data: teamData } = await db
         .from(TABLE_TEAMS)
-        .select("payment_status")
+        .select("payment_status, contestant_id")
         .eq("id", teamId)
         .single();
 
       if (teamData && teamData.payment_status !== "completed") {
-        await db
+        const { error: updateError } = await db
           .from(TABLE_TEAMS)
           .update({
             payment_status: "completed",
@@ -94,6 +94,58 @@ export async function POST(request: NextRequest) {
             status: "active",
           })
           .eq("id", teamId);
+
+        // Handle database trigger violations (race condition caught)
+        if (updateError) {
+          const isConstraintViolation =
+            updateError.code === "23514" ||
+            updateError.message?.includes("Maximum of 3 completed teams") ||
+            updateError.message?.includes("already on another completed team");
+
+          if (isConstraintViolation) {
+            console.error(`Race condition caught for team ${teamId}: ${updateError.message}`);
+
+            // Issue refund for this team
+            try {
+              await getStripe().refunds.create({
+                payment_intent: paymentId,
+                reason: "duplicate",
+              });
+              console.log(`Refund issued for team ${teamId} due to race condition`);
+            } catch (refundError) {
+              console.error(`Failed to issue refund for team ${teamId}:`, refundError);
+            }
+
+            // Mark team as refunded
+            await db.from(TABLE_TEAMS).update({ payment_status: "refunded" }).eq("id", teamId);
+
+            // Send apology email
+            try {
+              const { data: contestant } = await db
+                .from(TABLE_CONTESTANTS)
+                .select("email, name")
+                .eq("id", teamData.contestant_id)
+                .single();
+
+              if (contestant) {
+                const { sendRefundEmail } = await import("@/lib/email");
+                await sendRefundEmail({
+                  to: contestant.email,
+                  contestantName: contestant.name,
+                  reason: "Your payment was processed but your entry could not be completed due to a conflict (duplicate golfer or maximum teams exceeded). Your $30 has been automatically refunded.",
+                });
+              }
+            } catch (emailErr) {
+              console.error("Failed to send refund email:", emailErr);
+            }
+
+            continue; // Skip to next team
+          }
+
+          // Other database errors - log and continue
+          console.error(`Failed to update team ${teamId}:`, updateError);
+          continue;
+        }
 
         console.log(`Team ${teamId} marked as completed`);
       }

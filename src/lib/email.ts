@@ -298,3 +298,111 @@ We apologize for any inconvenience. If you have questions, reply to this email.
     return { success: false, error: message };
   }
 }
+
+interface SendRefundEmailParams {
+  to: string;
+  contestantName: string;
+  reason: string;
+}
+
+export async function sendRefundEmail({
+  to,
+  contestantName,
+  reason,
+}: SendRefundEmailParams): Promise<{ success: boolean; error?: string }> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("RESEND_API_KEY not configured, skipping refund email");
+    return { success: false, error: "Email service not configured" };
+  }
+
+  const subject = `Entry Refunded - Four Days in April`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <h1 style="color: #065f46; margin: 0; font-size: 28px;">Four Days in April</h1>
+          <p style="color: #6b7280; margin: 8px 0 0 0;">2026 Contest</p>
+        </div>
+
+        <div style="background: #fef3c7; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
+          <p style="margin: 0; color: #92400e; font-size: 18px; font-weight: 600;">
+            Entry Refunded
+          </p>
+        </div>
+
+        <p>Hi ${contestantName},</p>
+
+        <p>${reason}</p>
+
+        <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin: 24px 0;">
+          <p style="margin: 0; font-weight: 500;">Want to Try Again?</p>
+          <p style="margin: 8px 0 0 0; color: #6b7280;">
+            You can submit a new team through the normal submission process.
+          </p>
+          <p style="margin: 12px 0 0 0;">
+            <a href="https://4-days-in-april.vercel.app/teams/builder"
+               style="display: inline-block; background: #065f46; color: white; padding: 10px 20px;
+                      border-radius: 6px; text-decoration: none; font-weight: 500;">
+              Build New Team
+            </a>
+          </p>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px;">
+          Please allow 5-10 business days for the refund to appear on your statement.
+          If you have questions, reply to this email.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+        <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+          Four Days in April 2026 Contest
+        </p>
+      </body>
+    </html>
+  `;
+
+  const text = `
+Four Days in April 2026 Contest
+Entry Refunded
+
+Hi ${contestantName},
+
+${reason}
+
+WANT TO TRY AGAIN?
+You can submit a new team through the normal submission process.
+Build a new team: https://4-days-in-april.vercel.app/teams/builder
+
+Please allow 5-10 business days for the refund to appear on your statement.
+If you have questions, reply to this email.
+  `.trim();
+
+  try {
+    const { error } = await getResend().emails.send({
+      from: "Four Days in April <noreply@ppyconsultinggroup.com>",
+      to,
+      subject,
+      html,
+      text,
+    });
+
+    if (error) {
+      console.error("Failed to send refund email:", error);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`Refund email sent to ${to}`);
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("Email send error:", message);
+    return { success: false, error: message };
+  }
+}
