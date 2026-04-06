@@ -219,7 +219,7 @@ All API routes are Next.js Route Handlers in `src/app/api/`. Each `route.ts` fil
 | `src/app/api/golfers/[id]/route.ts` | GET `/api/golfers/{id}` | Single golfer details |
 | `src/app/api/leaderboard/route.ts` | GET `/api/leaderboard` | Ranked teams with golfer scores |
 | `src/app/api/teams/[id]/route.ts` | GET `/api/teams/{id}` | Single team detail (paid only) |
-| `src/app/api/my-teams/route.ts` | GET `/api/my-teams?email=` | All teams for an email |
+| `src/app/api/teams/[id]/route.ts` | GET `/api/teams/{id}` | Single team detail (paid only) |
 | `src/app/api/submit-team/route.ts` | POST `/api/submit-team` | Validate picks + create Stripe Checkout |
 | `src/app/api/submit-teams/route.ts` | POST `/api/submit-teams` | Batch submit with single Stripe Checkout |
 | `src/app/api/webhooks/payment/route.ts` | POST `/api/webhooks/payment` | Stripe payment confirmation + email |
@@ -238,7 +238,7 @@ All API routes are Next.js Route Handlers in `src/app/api/`. Each `route.ts` fil
 | `src/lib/espn-client.ts` | ESPN JSON API client (tournament ID `401811941`) |
 | `src/lib/email.ts` | Resend client for confirmation emails |
 | `src/lib/auth.ts` | Admin and cron Bearer token verification |
-| `src/lib/rate-limit.ts` | In-memory rate limiting for submit-team and my-teams |
+| `src/lib/rate-limit.ts` | Distributed rate limiting via Upstash Redis |
 
 ## API Endpoints
 
@@ -250,7 +250,6 @@ All API routes are Next.js Route Handlers in `src/app/api/`. Each `route.ts` fil
 | GET | `/api/golfers/{id}` | 60s CDN | — | Single golfer details |
 | GET | `/api/leaderboard` | 30s CDN | — | Ranked teams (empty until deadline passes) |
 | GET | `/api/teams/{id}` | 30s CDN | — | Single team detail (paid teams only) |
-| GET | `/api/my-teams?email=` | No cache | 15/min | All teams for a given email |
 | POST | `/api/submit-team` | — | 5/min | Validate picks, create team, return Stripe Checkout URL |
 | POST | `/api/submit-teams` | — | 5/min | Batch submit multiple teams with single Stripe Checkout |
 | GET | `/api/health` | — | — | Health check |
@@ -478,7 +477,6 @@ The app uses Upstash Redis for distributed rate limiting across serverless insta
 |----------|-------|--------|
 | `/api/submit-team` | 5 requests | 1 minute |
 | `/api/submit-teams` | 5 requests | 1 minute |
-| `/api/my-teams` | 15 requests | 1 minute |
 | Invite code validation | 5 failed attempts | 15-minute lockout |
 
 **Why distributed rate limiting?** In-memory rate limiting resets on cold starts and is per-instance. With 100+ serverless instances under load, users could bypass limits. Redis provides a single source of truth across all instances.

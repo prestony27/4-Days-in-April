@@ -6,7 +6,6 @@
  *
  * Rate limits:
  * - submit-team: 5/minute
- * - my-teams: 15/minute
  * - 429 response: { "detail": "Too many requests. Please try again later." }
  */
 
@@ -89,5 +88,4 @@ export function rateLimitResponse(): Response {
 // Rate limit configurations
 export const RATE_LIMITS = {
   submitTeam: { limit: 5, windowMs: 60 * 1000 }, // 5/minute
-  myTeams: { limit: 15, windowMs: 60 * 1000 }, // 15/minute
 } as const;

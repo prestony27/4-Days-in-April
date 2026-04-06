@@ -150,7 +150,7 @@ The tournament runs April 9-12, 2026. Good luck!
 
   try {
     const { error } = await getResend().emails.send({
-      from: "Four Days in April <noreply@ppyconsultinggroup.com>",
+      from: "Four Days in April <4daysinapril@ppyconsultinggroup.com>",
       to,
       subject,
       html,
@@ -278,7 +278,7 @@ We apologize for any inconvenience. If you have questions, reply to this email.
 
   try {
     const { error } = await getResend().emails.send({
-      from: "Four Days in April <noreply@ppyconsultinggroup.com>",
+      from: "Four Days in April <4daysinapril@ppyconsultinggroup.com>",
       to,
       subject,
       html,
@@ -386,7 +386,7 @@ If you have questions, reply to this email.
 
   try {
     const { error } = await getResend().emails.send({
-      from: "Four Days in April <noreply@ppyconsultinggroup.com>",
+      from: "Four Days in April <4daysinapril@ppyconsultinggroup.com>",
       to,
       subject,
       html,

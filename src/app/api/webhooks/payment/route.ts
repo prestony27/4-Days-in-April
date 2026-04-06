@@ -105,10 +105,11 @@ export async function POST(request: NextRequest) {
           if (isConstraintViolation) {
             console.error(`Race condition caught for team ${teamId}: ${updateError.message}`);
 
-            // Issue refund for this team
+            // Issue refund for this team ($30 partial refund, not entire batch)
             try {
               await getStripe().refunds.create({
                 payment_intent: paymentId,
+                amount: 3000, // $30 in cents - partial refund for single team
                 reason: "duplicate",
               });
               console.log(`Refund issued for team ${teamId} due to race condition`);
