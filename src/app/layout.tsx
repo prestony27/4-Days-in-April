@@ -17,9 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Four Days in April 2026",
+  title: "The Four Days in April Contest",
   description:
-    "Pick your golfers, build your team, and compete for cash prizes in the 4 Days in April 2026 Contest.",
+    "Pick your golfers, build your team, and compete for cash prizes in The Four Days in April Contest.",
 };
 
 export default function RootLayout({

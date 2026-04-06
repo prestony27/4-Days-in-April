@@ -6,7 +6,7 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-4 py-6">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>&copy; 2026 Four Days in April</span>
+            <span>&copy; 2026 The Four Days in April Contest</span>
             <span className="hidden sm:inline">|</span>
             <Link href="/rules" className="hover:text-foreground transition-colors">
               Rules
