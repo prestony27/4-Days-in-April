@@ -1,22 +1,41 @@
 /**
  * GET /api/leaderboard - Ranked teams with golfer scores and tiebreakers
  *
- * Only returns data after the submission deadline has passed.
+ * Before deadline: Returns team names and contestant names (no golfer picks)
+ * After deadline: Returns full leaderboard with golfer details and scores
  */
 
 import { NextRequest } from "next/server";
 import { getLeaderboard } from "@/lib/score-pipeline";
+import { getSupabase } from "@/lib/db";
+import { TABLE_TEAMS } from "@/lib/schema";
 import { SUBMISSION_DEADLINE } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
-  // Don't expose leaderboard until submissions are closed
   const now = new Date();
+
+  // Before deadline: return team names only (hide golfer picks)
   if (now < SUBMISSION_DEADLINE) {
+    const db = getSupabase();
+    const { data: teams, count } = await db
+      .from(TABLE_TEAMS)
+      .select("id, team_name, submitted_at, contestants(name)", { count: "exact" })
+      .eq("payment_status", "completed")
+      .order("submitted_at", { ascending: true });
+
     return Response.json(
       {
-        teams: [],
-        total: 0,
-        last_updated: now.toISOString(),
+        teams: (teams || []).map((t) => {
+          // Supabase returns related record as object (single) due to foreign key
+          const contestant = t.contestants as unknown as { name: string } | null;
+          return {
+            team_id: t.id,
+            team_name: t.team_name,
+            contestant_name: contestant?.name || "Unknown",
+            // No rank, total_score, status, or golfers - hidden until deadline
+          };
+        }),
+        total: count || 0,
         locked: false,
         unlocks_at: SUBMISSION_DEADLINE.toISOString(),
       },

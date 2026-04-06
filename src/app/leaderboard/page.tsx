@@ -54,33 +54,7 @@ export default function LeaderboardPage() {
 
   const teams = data?.teams ?? [];
   const lastUpdated = data?.last_updated;
-
-  // Show "not yet available" message if submissions are still open
-  if (!isLoading && data && data.locked === false) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-4">Leaderboard</h1>
-        <Card>
-          <CardContent className="py-8">
-            <div className="text-5xl mb-4">🔒</div>
-            <h2 className="text-xl font-semibold mb-2">Not Yet Available</h2>
-            <p className="text-muted-foreground mb-6">
-              The leaderboard will be visible once submissions close to prevent teams from copying picks.
-            </p>
-            <div className="mb-6">
-              <p className="text-sm text-muted-foreground mb-2">Submissions close in:</p>
-              <div className="inline-block bg-primary rounded-lg px-4 py-2">
-                <CountdownTimer />
-              </div>
-            </div>
-            <Button asChild>
-              <Link href="/teams/builder">Build Your Team</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const isPreDeadline = !isLoading && data && data.locked === false;
 
   const filteredTeams = searchFilter
     ? teams.filter(
@@ -103,20 +77,35 @@ export default function LeaderboardPage() {
     <div className="mx-auto max-w-4xl px-4 py-8">
       {/* Header */}
       <div className="mb-6 text-center">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-2">Leaderboard</h1>
-        <div className="flex items-center justify-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
-            </span>
-            <span className="text-sm text-green-600 font-medium">LIVE</span>
-          </div>
-        </div>
-        {lastUpdated && (
-          <p className="text-xs text-muted-foreground mt-2">
-            Last updated: {new Date(lastUpdated).toLocaleTimeString()}
-          </p>
+        <h1 className="text-3xl sm:text-4xl font-bold mb-2">
+          {isPreDeadline ? "Entries" : "Leaderboard"}
+        </h1>
+        {isPreDeadline ? (
+          <>
+            <p className="text-muted-foreground mb-3">
+              Team picks will be revealed when submissions close
+            </p>
+            <div className="inline-block bg-primary/10 rounded-lg px-4 py-2">
+              <CountdownTimer />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+                </span>
+                <span className="text-sm text-green-600 font-medium">LIVE</span>
+              </div>
+            </div>
+            {lastUpdated && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Last updated: {new Date(lastUpdated).toLocaleTimeString()}
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -158,6 +147,23 @@ export default function LeaderboardPage() {
             const isExpanded = expandedTeams.has(team.team_id);
             const isDQ = team.status === "disqualified";
 
+            // Pre-deadline: simplified card without scores/expand
+            if (isPreDeadline) {
+              return (
+                <Card key={team.team_id} className="overflow-hidden">
+                  <div className="p-4 min-h-[56px] flex items-center gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{team.team_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {team.contestant_name}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              );
+            }
+
+            // Post-deadline: full expandable card with scores
             return (
               <Card
                 key={team.team_id}
