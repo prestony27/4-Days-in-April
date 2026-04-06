@@ -21,7 +21,7 @@ export function Header() {
           {/* Logo / Title */}
           <Link href="/" className="flex items-center gap-2">
             <span className="text-xl sm:text-2xl font-bold tracking-tight">
-              The Four Days in April Contest
+              Four Days in April
             </span>
           </Link>
 
