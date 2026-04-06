@@ -15,12 +15,12 @@ export async function GET(request: NextRequest) {
   const now = new Date();
 
   // Before deadline: return team names only (hide golfer picks)
+  // Show all submitted teams regardless of payment status - payment verification is manual
   if (now < SUBMISSION_DEADLINE) {
     const db = getSupabase();
     const { data: teams, count } = await db
       .from(TABLE_TEAMS)
       .select("id, team_name, submitted_at, contestants(name)", { count: "exact" })
-      .eq("payment_status", "completed")
       .order("submitted_at", { ascending: true });
 
     return Response.json(
