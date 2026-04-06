@@ -205,14 +205,13 @@ export async function validateMaxTeams(email: string): Promise<void> {
 
   const contestantId = contestantData.id;
 
-  // Check completed teams against the 3-team rule
-  const { count: completedCount } = await db
+  // Check all teams against the 3-team rule (regardless of payment status)
+  const { count: teamCount } = await db
     .from(TABLE_TEAMS)
     .select("id", { count: "exact", head: true })
-    .eq("contestant_id", contestantId)
-    .eq("payment_status", "completed");
+    .eq("contestant_id", contestantId);
 
-  if (completedCount !== null && completedCount >= MAX_TEAMS_PER_EMAIL) {
+  if (teamCount !== null && teamCount >= MAX_TEAMS_PER_EMAIL) {
     throw new ValidationError(
       `Maximum of ${MAX_TEAMS_PER_EMAIL} teams per person. You already have the maximum number of teams.`,
       "email"

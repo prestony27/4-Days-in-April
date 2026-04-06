@@ -212,14 +212,13 @@ export async function POST(request: NextRequest) {
   const teamId = insertedTeam.id;
 
   // Post-insert race condition checks (catches concurrent submissions)
-  // 1. Max 3 completed teams
-  const { count: completedCount } = await db
+  // 1. Max 3 teams (regardless of payment status)
+  const { count: teamCount } = await db
     .from(TABLE_TEAMS)
     .select("id", { count: "exact", head: true })
-    .eq("contestant_id", contestantId)
-    .eq("payment_status", "completed");
+    .eq("contestant_id", contestantId);
 
-  if (completedCount !== null && completedCount > MAX_TEAMS_PER_EMAIL) {
+  if (teamCount !== null && teamCount > MAX_TEAMS_PER_EMAIL) {
     await db.from(TABLE_TEAMS).delete().eq("id", teamId);
     return Response.json(
       { detail: { message: `Maximum of ${MAX_TEAMS_PER_EMAIL} teams per person.`, field: "email" } },

@@ -251,16 +251,15 @@ export async function POST(request: NextRequest) {
     contestantId = insertedContestant.id;
   }
 
-  // Check max teams (existing completed + new batch)
-  const { count: completedCount } = await db
+  // Check max teams (existing + new batch, regardless of payment status)
+  const { count: existingCount } = await db
     .from(TABLE_TEAMS)
     .select("id", { count: "exact", head: true })
-    .eq("contestant_id", contestantId)
-    .eq("payment_status", "completed");
+    .eq("contestant_id", contestantId);
 
-  const totalAfterSubmit = (completedCount || 0) + body.teams.length;
+  const totalAfterSubmit = (existingCount || 0) + body.teams.length;
   if (totalAfterSubmit > MAX_TEAMS_PER_EMAIL) {
-    const remaining = MAX_TEAMS_PER_EMAIL - (completedCount || 0);
+    const remaining = MAX_TEAMS_PER_EMAIL - (existingCount || 0);
     return Response.json(
       { detail: { message: `You can only submit ${remaining} more team(s). Maximum is ${MAX_TEAMS_PER_EMAIL} teams per person.`, field: "teams" } },
       { status: 422 }
