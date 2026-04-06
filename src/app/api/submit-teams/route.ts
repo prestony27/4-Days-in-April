@@ -26,6 +26,7 @@ import {
   recordFailedAttempt,
   clearFailedAttempts,
 } from "@/lib/invite-code";
+import { sendConfirmationEmail } from "@/lib/email";
 import type { Tier } from "@/types";
 
 export const runtime = "nodejs";
@@ -320,6 +321,51 @@ export async function POST(request: NextRequest) {
     }
 
     teamIds.push(insertedTeam.id);
+  }
+
+  // Send confirmation email with all team details
+  try {
+    // Collect all unique golfer IDs across all teams
+    const allUniqueGolferIds = new Set<string>();
+    for (const enriched of allEnrichedPicks) {
+      for (const pick of enriched) {
+        allUniqueGolferIds.add(pick.golfer_id);
+      }
+    }
+
+    // Fetch golfer details for the email
+    const { data: golfersData } = await db
+      .from(TABLE_GOLFERS)
+      .select("id, name, tier, world_rank")
+      .in("id", Array.from(allUniqueGolferIds));
+
+    const golferMap = new Map((golfersData || []).map((g) => [g.id, g]));
+
+    // Build team confirmations
+    const teamConfirmations = body.teams.map((team, i) => {
+      const enriched = allEnrichedPicks[i];
+      return {
+        team_name: team.team_name,
+        golfers: enriched.map((pick) => {
+          const g = golferMap.get(pick.golfer_id);
+          return {
+            name: g?.name || "Unknown",
+            tier: g?.tier || 0,
+            world_rank: g?.world_rank || 0,
+          };
+        }),
+      };
+    });
+
+    await sendConfirmationEmail({
+      to: email,
+      contestantName: body.name,
+      teams: teamConfirmations,
+      totalPaid: body.teams.length * 30,
+    });
+  } catch (emailErr) {
+    // Don't fail the submission if email fails
+    console.error("Failed to send confirmation email:", emailErr);
   }
 
   // Return team info for redirect to Venmo payment page

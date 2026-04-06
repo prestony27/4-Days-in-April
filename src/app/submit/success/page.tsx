@@ -179,7 +179,7 @@ function SuccessContent() {
                 <p className="text-sm font-medium mb-2">Complete your payment via Venmo:</p>
                 <ul className="text-sm text-muted-foreground space-y-1">
                   <li>Send ${totalAmount} to <strong>@pyoung</strong></li>
-                  <li>For the note, enter <strong>&quot;gift&quot;</strong></li>
+                  <li>For the note, enter <strong>&quot;4DIA&quot;</strong></li>
                 </ul>
               </CardContent>
             </Card>

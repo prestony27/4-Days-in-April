@@ -7,7 +7,7 @@
 
 import { NextRequest } from "next/server";
 import { getSupabase } from "@/lib/db";
-import { TABLE_CONTESTANTS, TABLE_TEAMS, TIER_GOLFER_COLS } from "@/lib/schema";
+import { TABLE_CONTESTANTS, TABLE_TEAMS, TABLE_GOLFERS, TIER_GOLFER_COLS } from "@/lib/schema";
 import {
   runAllValidations,
   ValidationError,
@@ -21,6 +21,7 @@ import {
   recordFailedAttempt,
   clearFailedAttempts,
 } from "@/lib/invite-code";
+import { sendConfirmationEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -249,6 +250,40 @@ export async function POST(request: NextRequest) {
       { detail: { message: "A golfer on this team is already on another of your teams.", field: "golfers" } },
       { status: 409 }
     );
+  }
+
+  // Send confirmation email with team details
+  try {
+    // Fetch golfer details for the email
+    const golferIds = Object.values(tierMap);
+    const { data: golfersData } = await db
+      .from(TABLE_GOLFERS)
+      .select("id, name, tier, world_rank")
+      .in("id", golferIds);
+
+    const golferMap = new Map((golfersData || []).map((g) => [g.id, g]));
+
+    const teamConfirmation = {
+      team_name: body.team_name,
+      golfers: golferIds.map((gid) => {
+        const g = golferMap.get(gid);
+        return {
+          name: g?.name || "Unknown",
+          tier: g?.tier || 0,
+          world_rank: g?.world_rank || 0,
+        };
+      }),
+    };
+
+    await sendConfirmationEmail({
+      to: email,
+      contestantName: body.name,
+      teams: [teamConfirmation],
+      totalPaid: 30,
+    });
+  } catch (emailErr) {
+    // Don't fail the submission if email fails
+    console.error("Failed to send confirmation email:", emailErr);
   }
 
   // Return team info for redirect to Venmo payment page

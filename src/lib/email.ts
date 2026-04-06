@@ -105,7 +105,7 @@ export async function sendConfirmationEmail({
           <p style="margin: 0; font-weight: 600; color: #92400e;">Payment Instructions:</p>
           <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #6b7280;">
             <li>Send <strong>$${totalPaid}</strong> to <strong>@pyoung</strong> on Venmo</li>
-            <li>For the note, enter <strong>"gift"</strong></li>
+            <li>For the note, enter <strong>"4DIA"</strong></li>
           </ul>
         </div>
 
@@ -149,7 +149,7 @@ Please complete your Venmo payment to confirm your entry.
 
 PAYMENT INSTRUCTIONS:
 - Send $${totalPaid} to @pyoung on Venmo
-- For the note, enter "gift"
+- For the note, enter "4DIA"
 
 We will manually verify that Venmo payments have been received.
 Entries without payment will be removed before the tournament starts.

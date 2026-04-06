@@ -13,7 +13,7 @@ export function Footer() {
             </Link>
           </div>
           <p className="text-xs text-muted-foreground text-center max-w-2xl">
-            Private, invite-only contest among friends. Operated by PP&Y Consulting Group.
+            Private, invite-only contest among friends.
             Entry fees cover operational costs only; all remaining funds awarded as prizes.
           </p>
           <p className="text-xs text-muted-foreground text-center">
