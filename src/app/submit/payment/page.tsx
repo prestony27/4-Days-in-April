@@ -84,6 +84,14 @@ function PaymentContent() {
             />
           </div>
           <p className="text-lg font-semibold text-primary">@pyoung</p>
+          <a
+            href="https://venmo.com/u/pyoung"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-muted-foreground underline hover:text-primary mt-2"
+          >
+            Open in Venmo app
+          </a>
         </CardContent>
       </Card>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useTeamBuilderStore } from "@/store/team-builder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -421,6 +422,7 @@ function TierStep({
 }
 
 function ReviewStep({ golfers }: { golfers: Golfer[] }) {
+  const router = useRouter();
   const store = useTeamBuilderStore();
   const allSelections = store.getAllSelections();
   const isComplete = allSelections.length === 5;
@@ -517,8 +519,13 @@ function ReviewStep({ golfers }: { golfers: Golfer[] }) {
       const data = await res.json();
       // Redirect to Venmo payment page with team info
       const teamIds = data.team_ids?.join(",") || data.team_id;
-      const teamNames = data.team_names?.join(",") || data.team_name;
-      window.location.href = `/submit/payment?team_ids=${teamIds}&names=${encodeURIComponent(teamNames)}`;
+      if (!teamIds) {
+        toast.error("Team submission failed. Please try again.");
+        return;
+      }
+      const paymentUrl = `/submit/payment?team_ids=${teamIds}`;
+      // Use Next.js router for client-side navigation (more reliable on mobile)
+      router.push(paymentUrl);
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {

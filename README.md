@@ -8,10 +8,9 @@ A fantasy golf contest website for the 2026 Masters Tournament (April 9-12). Use
 - **Invite-only access** — Private contest restricted to invited participants
 - Guided team builder wizard with tier-based golfer selection
 - Multi-team cart with single checkout (submit up to 3 teams at once)
-- Live tournament leaderboard with auto-polling (locked until submissions close)
-- Stripe Checkout payment integration with automatic refunds
+- Live tournament leaderboard with auto-polling
+- Venmo payment with manual verification
 - Confirmation emails via Resend
-- Pre-tournament withdrawal handling with auto-refunds
 - ESPN-sourced live scoring with admin fallback
 - Mobile-first responsive design
 
@@ -22,15 +21,15 @@ A fantasy golf contest website for the 2026 Masters Tournament (April 9-12). Use
 | Frontend (Next.js) | ✅ Deployed | Live on Vercel |
 | Backend (Next.js API Routes) | ✅ Deployed | 17 endpoints working |
 | Database (Supabase) | ✅ Ready | Schema deployed, 91 golfers seeded |
-| Stripe Payments | ✅ Configured | Test + live webhooks active |
-| Email (Resend) | ✅ Configured | Confirmation emails on payment |
+| Payments (Venmo) | ✅ Manual | QR code + manual verification |
+| Email (Resend) | ✅ Configured | Confirmation emails on submission |
 | Golfer Data | ✅ Seeded | 91 golfers with OWGR + ESPN IDs |
 
 ### Pre-Tournament Checklist
 
-1. **Switch to live Stripe keys** - Update `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in Vercel
-2. **Monitor submissions** - Teams visible in Supabase dashboard
-3. **Handle withdrawals** - If a golfer withdraws, use `/api/admin/withdraw-golfer` to auto-refund affected teams
+1. **Verify Venmo payments** - Export Venmo transactions and update `payment_status` to `completed` in Supabase for paid entries
+2. **Remove unpaid entries** - Delete teams with `payment_status = 'pending'` that haven't paid
+3. **Handle withdrawals** - If a golfer withdraws, manually refund affected users via Venmo
 4. **Monitor cron** - Verify `/api/cron/update-scores` runs every 10 minutes during tournament hours (8am-8pm EDT)
 
 ## Tech Stack
@@ -41,7 +40,7 @@ A fantasy golf contest website for the 2026 Masters Tournament (April 9-12). Use
 | State | Zustand (client), TanStack Query (server) |
 | Backend | Next.js API Routes (App Router) |
 | Database | Supabase (PostgreSQL) |
-| Payments | Stripe Checkout + Webhooks |
+| Payments | Venmo (manual verification) |
 | Email | Resend (transactional) |
 | Deployment | Vercel |
 | Rankings Data | DataGolf (OWGR scraping) |
@@ -53,7 +52,6 @@ A fantasy golf contest website for the 2026 Masters Tournament (April 9-12). Use
 
 - Node.js 18+
 - Supabase project (free tier works)
-- Stripe account (test mode)
 
 ### Installation
 
@@ -69,10 +67,6 @@ Create a `.env.local` file:
 # Supabase
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Stripe
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
 
 # Email (Resend)
 RESEND_API_KEY=re_...
@@ -138,14 +132,15 @@ TheMasters/
 │   ├── teams/builder/page.tsx  # Step-by-step team builder wizard
 │   ├── leaderboard/page.tsx    # Live tournament leaderboard
 │   ├── submit/page.tsx         # Payment info page
-│   ├── submit/success/page.tsx # Post-payment confirmation
+│   ├── submit/payment/page.tsx # Venmo QR code and payment instructions
+│   ├── submit/success/page.tsx # Post-submission confirmation
 │   ├── rules/page.tsx          # Full contest rules
 │   └── api/                    # API route handlers
 │       ├── health/route.ts
 │       ├── golfers/route.ts
 │       ├── leaderboard/route.ts
 │       ├── submit-team/route.ts
-│       ├── webhooks/payment/route.ts
+│       ├── submit-teams/route.ts
 │       ├── cron/update-scores/route.ts
 │       └── admin/              # Admin endpoints
 ├── src/components/
@@ -179,9 +174,10 @@ The frontend uses the Next.js App Router (`src/app/`). Each directory under `src
 | `/` | `page.tsx` | Static | Landing page with countdown timer, rules overview, tier breakdown, and CTAs |
 | `/rankings` | `rankings/page.tsx` | Client | Searchable, collapsible tier-grouped golfer list. Fetches from `/api/golfers` |
 | `/teams/builder` | `teams/builder/page.tsx` | Client | 6-step team builder wizard with multi-team cart support |
-| `/leaderboard` | `leaderboard/page.tsx` | Client | Live-updating leaderboard (locked until submission deadline) |
+| `/leaderboard` | `leaderboard/page.tsx` | Client | Shows entries before deadline, full leaderboard after |
 | `/submit` | `submit/page.tsx` | Static | Entry info page with CTA to the team builder |
-| `/submit/success` | `submit/success/page.tsx` | Client | Post-payment confirmation with team details and golfer picks |
+| `/submit/payment` | `submit/payment/page.tsx` | Client | Venmo QR code and payment instructions |
+| `/submit/success` | `submit/success/page.tsx` | Client | Post-submission confirmation with team details |
 | `/rules` | `rules/page.tsx` | Static | Full contest rules rendered from constants |
 
 ### State Management
@@ -194,7 +190,7 @@ The frontend uses the Next.js App Router (`src/app/`). Each directory under `src
 
 **TanStack Query (`src/providers/query-provider.tsx`)** — Server state for API data:
 - Golfers list with 5-minute stale time
-- Leaderboard with 30-second polling via `refetchInterval`
+- Leaderboard with 2-minute polling via `refetchInterval`
 
 ## Backend Architecture
 
@@ -205,7 +201,6 @@ Client Request
   → Vercel Edge Network (CDN cache check)
     → Next.js Route Handler
       → Supabase REST API (database)
-      → Stripe API (payments)
       → ESPN API (live scores)
 ```
 
@@ -217,12 +212,10 @@ All API routes are Next.js Route Handlers in `src/app/api/`. Each `route.ts` fil
 |------|-----------|---------|
 | `src/app/api/golfers/route.ts` | GET `/api/golfers` | Golfer list with tier filtering |
 | `src/app/api/golfers/[id]/route.ts` | GET `/api/golfers/{id}` | Single golfer details |
-| `src/app/api/leaderboard/route.ts` | GET `/api/leaderboard` | Ranked teams with golfer scores |
-| `src/app/api/teams/[id]/route.ts` | GET `/api/teams/{id}` | Single team detail (paid only) |
-| `src/app/api/teams/[id]/route.ts` | GET `/api/teams/{id}` | Single team detail (paid only) |
-| `src/app/api/submit-team/route.ts` | POST `/api/submit-team` | Validate picks + create Stripe Checkout |
-| `src/app/api/submit-teams/route.ts` | POST `/api/submit-teams` | Batch submit with single Stripe Checkout |
-| `src/app/api/webhooks/payment/route.ts` | POST `/api/webhooks/payment` | Stripe payment confirmation + email |
+| `src/app/api/leaderboard/route.ts` | GET `/api/leaderboard` | Entries (pre-deadline) or ranked teams (post-deadline) |
+| `src/app/api/teams/[id]/route.ts` | GET `/api/teams/{id}` | Single team detail |
+| `src/app/api/submit-team/route.ts` | POST `/api/submit-team` | Validate picks, create team, send confirmation email |
+| `src/app/api/submit-teams/route.ts` | POST `/api/submit-teams` | Batch submit multiple teams |
 | `src/app/api/cron/update-scores/route.ts` | GET/POST `/api/cron/update-scores` | ESPN score ingestion |
 | `src/app/api/admin/*/route.ts` | POST `/api/admin/*` | Seed, score, submissions management |
 
@@ -248,17 +241,16 @@ All API routes are Next.js Route Handlers in `src/app/api/`. Each `route.ts` fil
 |--------|----------|-------|------------|-------------|
 | GET | `/api/golfers` | 60s CDN | — | List all golfers. Optional `?tier=1` filter |
 | GET | `/api/golfers/{id}` | 60s CDN | — | Single golfer details |
-| GET | `/api/leaderboard` | 30s CDN | — | Ranked teams (empty until deadline passes) |
-| GET | `/api/teams/{id}` | 30s CDN | — | Single team detail (paid teams only) |
-| POST | `/api/submit-team` | — | 5/min | Validate picks, create team, return Stripe Checkout URL |
-| POST | `/api/submit-teams` | — | 5/min | Batch submit multiple teams with single Stripe Checkout |
+| GET | `/api/leaderboard` | 60s/30s CDN | — | Entries (pre-deadline) or full leaderboard (post-deadline) |
+| GET | `/api/teams/{id}` | 30s CDN | — | Single team detail |
+| POST | `/api/submit-team` | — | 5/min | Validate picks, create team, send confirmation email |
+| POST | `/api/submit-teams` | — | 5/min | Batch submit multiple teams |
 | GET | `/api/health` | — | — | Health check |
 
-### Webhook / Cron Endpoints
+### Cron Endpoints
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/api/webhooks/payment` | Stripe signature | Payment confirmation (idempotent) |
 | GET/POST | `/api/cron/update-scores` | `CRON_SECRET` | Fetch ESPN scores, recalculate teams |
 
 ### Admin Endpoints
@@ -272,30 +264,8 @@ All require `Authorization: Bearer {ADMIN_API_KEY}`.
 | POST | `/api/admin/upsert-golfers` | Add or update golfers (recommended for field updates) |
 | POST | `/api/admin/update-score` | Manually update one golfer's score |
 | POST | `/api/admin/update-scores-bulk` | Bulk score update + auto team recalculation |
-| POST | `/api/admin/withdraw-golfer` | Pre-tournament withdrawal: refunds affected teams, sends notification |
 | POST | `/api/admin/close-submissions` | Emergency submission close |
 | POST | `/api/admin/open-submissions` | Re-open submissions |
-
-#### Upsert Golfers (Recommended for Field Updates)
-
-Use this endpoint to update the tournament field before the event. It handles both adding new golfers and updating existing ones in a single request, while preserving any scoring data.
-
-```bash
-curl -X POST https://4-days-in-april.vercel.app/api/admin/upsert-golfers \
-  -H "Authorization: Bearer {ADMIN_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "golfers": [
-      { "id": "9478", "name": "Scottie Scheffler", "world_rank": 1, "tier": 1 },
-      { "id": "9780", "name": "Jon Rahm", "world_rank": 2, "tier": 1 }
-    ]
-  }'
-```
-
-**Response:** `{ "created": 0, "updated": 2, "total": 2 }`
-
-- **For existing golfers**: Updates `name`, `world_rank`, `tier` only. Preserves `score_to_par`, `thru`, `position`, `status`.
-- **For new golfers**: Creates with provided data and default scoring values.
 
 ### Caching Strategy
 
@@ -303,43 +273,36 @@ Vercel Edge caches responses based on `Cache-Control` headers set by each endpoi
 
 - **Golfers**: `s-maxage=60, stale-while-revalidate=120` — data changes rarely
 - **Leaderboard/Teams**: `s-maxage=30, stale-while-revalidate=60` — updates every 10 min via cron
-- **My Teams**: `private, no-store` — user-specific, never cached
-- **Submit/Webhooks/Admin**: No caching — write operations
+- **Submit/Admin**: No caching — write operations
 
 ## Payment Flow
 
-### Single Team
+Payment is handled via **Venmo with manual verification**.
+
+### Submission Flow
 ```
 1. User submits team → POST /api/submit-team
-2. Backend validates picks (tiers, duplicates, deadline, max teams)
-3. Any existing pending teams for this user are deleted (cleanup)
-4. Team inserted with payment_status="pending"
-5. Post-insert race condition checks (rollback if violated)
-6. Stripe Checkout Session created → payment_url returned
-7. User redirected to Stripe Checkout
-8. Stripe sends webhook → POST /api/webhooks/payment
-9. Webhook verifies signature, updates team to payment_status="completed"
-10. Confirmation email sent via Resend with team details
+2. Backend validates picks (tiers, duplicates, deadline, max 3 teams)
+3. Team inserted with payment_status="pending"
+4. Confirmation email sent with Venmo payment instructions
+5. User redirected to /submit/payment (Venmo QR code)
+6. User pays via Venmo to @pyoung with note "4DIA"
+7. User clicks "I've Completed Payment" → /submit/success
 ```
+
+### Manual Payment Verification
+
+Before the tournament starts, the admin must:
+1. Export Venmo transactions
+2. Match payments to submitted teams
+3. Update `payment_status` to `"completed"` in Supabase for paid entries
+4. Delete or refund entries that haven't paid
 
 ### Multi-Team Cart
-```
-1. User builds teams in cart (frontend Zustand store)
-2. User clicks "Checkout X Teams" → POST /api/submit-teams
-3. Backend validates all teams + cross-team duplicate check
-4. All teams inserted as pending, single Stripe Checkout with multiple line items
-5. After payment, webhook marks all teams as completed
-6. Single confirmation email sent with all team details
-```
 
-**Idempotency:** The webhook handler checks if `payment_status` is already `"completed"` before updating, so Stripe's 72-hour retry window is safe.
+Users can build up to 3 teams in their cart and submit them together. Each team costs $30.
 
-**Abandoned team cleanup:** Pending teams are automatically deleted when a user starts a new submission. This prevents golfers from being "locked" by unpaid teams.
-
-**Local testing:** Use the Stripe CLI to forward webhooks:
-```bash
-stripe listen --forward-to localhost:3000/api/webhooks/payment
-```
+**Team limits:** Each email can have a maximum of 3 teams total (regardless of payment status).
 
 ## Business Logic
 
@@ -356,21 +319,16 @@ Submission deadline: **5:00 AM EDT, April 9, 2026** (first round tee times). Enf
 
 ### Leaderboard Visibility
 
-The leaderboard is **locked until the submission deadline** to prevent users from copying other teams' picks. Before the deadline, `/api/leaderboard` returns an empty list and the frontend shows a "Not Yet Available" message with countdown.
+**Before the deadline:** The leaderboard shows an "Entries" view with team names and contestant names only. Golfer picks are hidden to prevent copying.
+
+**After the deadline:** The full leaderboard is revealed with:
+- Team rankings and scores
+- Expandable rows showing each team's golfer picks
+- Live score updates during the tournament
 
 ### Duplicate Golfer Prevention
 
-A golfer cannot appear on more than one of a user's paid teams. Validation checks only `completed` (paid) teams — pending/unpaid teams do not lock golfers. For multi-team cart submissions, duplicates are also checked across all teams in the cart before checkout. Post-insert race condition detection catches concurrent submissions.
-
-### Pre-Tournament Withdrawals
-
-If a golfer withdraws before the tournament starts:
-1. Admin calls `POST /api/admin/withdraw-golfer` with the golfer's ID
-2. System finds all completed teams containing that golfer
-3. Each affected team receives an automatic $30 Stripe refund
-4. Team is marked as `payment_status: "refunded"` (excluded from leaderboard and team limits)
-5. Notification email sent to each affected user with refund confirmation
-6. Users can submit a new team through the normal process
+A golfer cannot appear on more than one of a user's teams. Validation checks all teams for that user (regardless of payment status). For multi-team cart submissions, duplicates are also checked across all teams in the cart before submission.
 
 ### Score Calculation
 
@@ -433,22 +391,12 @@ tier1_golfer_id, tier2a_golfer_id, tier2b_golfer_id, tier3_golfer_id, tier4_golf
 4. Deploy — Vercel handles everything automatically
 5. Cron job (`/api/cron/update-scores`) runs every 10 minutes during tournament hours (8am-8pm EDT)
 
-### Stripe Webhooks
-
-**Important:** Test mode and live mode require separate webhooks with different signing secrets.
-
-1. In Stripe dashboard, toggle to the correct mode (Test/Live)
-2. Create a webhook endpoint: `https://4-days-in-april.vercel.app/api/webhooks/payment`
-3. Subscribe to `checkout.session.completed` and `charge.refunded` events
-4. Copy the signing secret and set `STRIPE_WEBHOOK_SECRET` in Vercel
-5. When switching modes, update both `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`
-
 ### Resend (Email)
 
 1. Create a Resend account at [resend.com](https://resend.com)
 2. Add and verify your sending domain (or use `onboarding@resend.dev` for testing)
 3. Create an API key and set `RESEND_API_KEY` in Vercel environment variables
-4. Confirmation emails are sent automatically after successful payment
+4. Confirmation emails are sent automatically when teams are submitted
 
 ### Supabase
 
@@ -479,8 +427,6 @@ The app uses Upstash Redis for distributed rate limiting across serverless insta
 | `/api/submit-teams` | 5 requests | 1 minute |
 | Invite code validation | 5 failed attempts | 15-minute lockout |
 
-**Why distributed rate limiting?** In-memory rate limiting resets on cold starts and is per-instance. With 100+ serverless instances under load, users could bypass limits. Redis provides a single source of truth across all instances.
-
 ### Supabase Connection Pooling
 
 Enable connection pooling for high-concurrency database access.
@@ -491,8 +437,6 @@ Enable connection pooling for high-concurrency database access.
 3. Copy the pooler connection string (uses port 6543)
 4. Add `SUPABASE_POOLER_URL` to Vercel environment variables
 
-**Why?** Without pooling, each serverless function opens a new PostgreSQL connection. With 3,000 concurrent users, this exhausts connection limits (default: 60-100). Connection pooling reuses connections efficiently.
-
 ### Database Constraints
 
 The app uses database-level triggers to prevent race conditions:
@@ -501,8 +445,6 @@ The app uses database-level triggers to prevent race conditions:
 
 2. **Duplicate golfer trigger** (`enforce_no_duplicate_golfers`): Prevents the same golfer appearing on multiple completed teams for one contestant.
 
-**Why triggers instead of app-level checks?** Race conditions occur when two concurrent requests both pass validation before either completes payment. Only database triggers execute atomically with the update.
-
 ### Pre-computed Leaderboard Rankings
 
 Rankings are pre-computed in PostgreSQL rather than calculated in JavaScript:
@@ -510,10 +452,6 @@ Rankings are pre-computed in PostgreSQL rather than calculated in JavaScript:
 - **Migration:** `003_leaderboard_ranking.sql` adds `rank`, `tier4_score`, `tier2_combined_score` columns
 - **Function:** `update_team_rankings()` uses PostgreSQL window functions for efficient ranking
 - **Cron:** Rankings are recalculated after each score update
-
-**Performance improvement:** 
-- Before: Load all 3,000+ teams into memory, sort in JS, then paginate
-- After: Query 50 teams with `ORDER BY rank LIMIT OFFSET`
 
 ### Environment Variables Reference
 
@@ -524,8 +462,6 @@ Rankings are pre-computed in PostgreSQL rather than calculated in JavaScript:
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key for admin access |
 | `UPSTASH_REDIS_REST_URL` | Yes | Upstash Redis REST URL |
 | `UPSTASH_REDIS_REST_TOKEN` | Yes | Upstash Redis REST token |
-| `STRIPE_SECRET_KEY` | Yes | Stripe API secret key |
-| `STRIPE_WEBHOOK_SECRET` | Yes | Stripe webhook signing secret |
 | `RESEND_API_KEY` | Yes | Resend API key for emails |
 | `FRONTEND_URL` | Yes | Frontend URL for redirects |
 | `ADMIN_API_KEY` | Yes | Admin API authentication |
