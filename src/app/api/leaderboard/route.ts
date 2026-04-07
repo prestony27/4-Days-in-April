@@ -13,10 +13,13 @@ import { SUBMISSION_DEADLINE } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   const now = new Date();
+  const searchParams = request.nextUrl.searchParams;
+  const isPreview = searchParams.get("preview") === "true";
 
   // Before deadline: return team names only (hide golfer picks)
   // Show all submitted teams regardless of payment status - payment verification is manual
-  if (now < SUBMISSION_DEADLINE) {
+  // Skip this check if preview=true (for admin preview page)
+  if (now < SUBMISSION_DEADLINE && !isPreview) {
     const db = getSupabase();
     const { data: teams, count } = await db
       .from(TABLE_TEAMS)
@@ -46,8 +49,6 @@ export async function GET(request: NextRequest) {
       }
     );
   }
-
-  const searchParams = request.nextUrl.searchParams;
 
   // Parse pagination params with defaults and bounds
   let limit = parseInt(searchParams.get("limit") || "50", 10);
