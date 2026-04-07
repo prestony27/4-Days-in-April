@@ -328,7 +328,7 @@ Submission deadline: **5:00 AM EDT, April 9, 2026** (first round tee times). Enf
 
 ### Duplicate Golfer Prevention
 
-A golfer cannot appear on more than one of a user's teams. Validation checks all teams for that user (regardless of payment status). For multi-team cart submissions, duplicates are also checked across all teams in the cart before submission.
+A golfer cannot appear on more than one of a user's teams. Since payments are verified manually, validation checks **all teams for that user regardless of payment status** (both pending and completed). This prevents users from submitting duplicate golfers while awaiting payment verification. For multi-team cart submissions, duplicates are also checked across all teams in the cart before submission.
 
 ### Score Calculation
 
@@ -437,13 +437,19 @@ Enable connection pooling for high-concurrency database access.
 3. Copy the pooler connection string (uses port 6543)
 4. Add `SUPABASE_POOLER_URL` to Vercel environment variables
 
+### Validation and Payment Status
+
+Since payments are verified manually via Venmo, all submission validation (duplicate golfers, max teams) checks **all teams regardless of payment status**. This ensures users cannot submit duplicate golfers while their previous teams are still in "pending" status awaiting payment verification.
+
 ### Database Constraints
 
-The app uses database-level triggers to prevent race conditions:
+The app uses database-level triggers as a secondary safety net for race conditions:
 
 1. **Max 3 teams trigger** (`enforce_max_completed_teams`): Prevents more than 3 completed teams per contestant. Fires when `payment_status` changes to `completed`.
 
 2. **Duplicate golfer trigger** (`enforce_no_duplicate_golfers`): Prevents the same golfer appearing on multiple completed teams for one contestant.
+
+**Note:** Application-level validation is the primary enforcement and checks all teams. Database triggers provide additional protection for paid teams only.
 
 ### Pre-computed Leaderboard Rankings
 

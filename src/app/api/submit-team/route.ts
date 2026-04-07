@@ -227,12 +227,13 @@ export async function POST(request: NextRequest) {
   }
 
   // 2. Post-insert race condition check: verify no duplicate golfers snuck in
+  // Check ALL teams regardless of payment status (payments are verified manually)
   const newGolferIds = new Set(Object.values(tierMap));
   const { data: otherTeams } = await db
     .from(TABLE_TEAMS)
     .select(TIER_GOLFER_COLS.join(", "))
     .eq("contestant_id", contestantId)
-    .eq("payment_status", "completed");
+    .neq("id", teamId);
 
   const existingGolferIds = new Set<string>();
   for (const t of otherTeams || []) {

@@ -148,12 +148,11 @@ export async function validateNoDuplicateGolfers(
 
   const contestantId = contestantData.id;
 
-  // Check only completed (paid) teams — pending teams are cleaned up on new submission
+  // Check ALL teams regardless of payment status (payments are verified manually)
   const { data: teamsData } = await db
     .from(TABLE_TEAMS)
     .select(TIER_GOLFER_COLS.join(", "))
-    .eq("contestant_id", contestantId)
-    .eq("payment_status", "completed");
+    .eq("contestant_id", contestantId);
 
   const existingGolferIds = new Set<string>();
   for (const team of teamsData || []) {
@@ -186,9 +185,9 @@ export async function validateNoDuplicateGolfers(
 /**
  * Ensure contestant hasn't exceeded the max team limit.
  *
- * Two checks to prevent orphan-team attacks:
- * 1. Max 3 completed (paid) teams — the actual contest rule
- * 2. Max 1 pending (unpaid) team at a time — prevents blocking via abandoned checkouts
+ * Checks ALL teams regardless of payment status (pending or completed).
+ * Since payments are verified manually via Venmo, we enforce the limit
+ * at submission time to prevent users from submitting more than 3 teams.
  */
 export async function validateMaxTeams(email: string): Promise<void> {
   const db = getSupabase();
