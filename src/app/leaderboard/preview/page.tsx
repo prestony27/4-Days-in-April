@@ -4,9 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { TierBadge } from "@/components/shared/tier-badge";
-import type { LeaderboardResponse, LeaderboardGolfer, Tier } from "@/types";
+import type { LeaderboardResponse, LeaderboardGolfer } from "@/types";
 
 interface LeaderboardApiResponse extends LeaderboardResponse {
   locked?: boolean;
@@ -25,22 +23,21 @@ function formatScore(score: number | null): string {
   return score > 0 ? `+${score}` : `${score}`;
 }
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "STATUS_CUT":
-      return <Badge variant="secondary" className="text-xs">CUT</Badge>;
-    case "STATUS_WITHDRAWN":
-      return <Badge variant="destructive" className="text-xs">WD</Badge>;
-    case "STATUS_DISQUALIFIED":
-      return <Badge variant="destructive" className="text-xs">DQ</Badge>;
-    default:
-      return null;
-  }
+function getScoreColor(score: number | null): string {
+  if (score === null) return "text-muted-foreground";
+  if (score < 0) return "text-red-600 font-semibold";
+  if (score > 0) return "text-blue-600";
+  return "";
+}
+
+function getGolferByTier(golfers: LeaderboardGolfer[] | undefined, tier: number, index = 0): LeaderboardGolfer | null {
+  if (!golfers) return null;
+  const tierGolfers = golfers.filter(g => g.tier === tier);
+  return tierGolfers[index] || null;
 }
 
 export default function LeaderboardPreviewPage() {
   const [searchFilter, setSearchFilter] = useState("");
-  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["leaderboard-preview"],
@@ -60,17 +57,8 @@ export default function LeaderboardPreviewPage() {
       )
     : teams;
 
-  const toggleTeam = (teamId: string) => {
-    setExpandedTeams((prev) => {
-      const next = new Set(prev);
-      if (next.has(teamId)) next.delete(teamId);
-      else next.add(teamId);
-      return next;
-    });
-  };
-
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-[1400px] px-4 py-8">
       {/* Header */}
       <div className="mb-6 text-center">
         <Badge variant="outline" className="mb-3 text-orange-600 border-orange-600">
@@ -118,121 +106,136 @@ export default function LeaderboardPreviewPage() {
         </div>
       )}
 
-      {/* Team List */}
+      {/* Table */}
       {!isLoading && !error && filteredTeams.length > 0 && (
-        <div className="space-y-2">
-          {filteredTeams.map((team) => {
-            const isExpanded = expandedTeams.has(team.team_id);
-            const isDQ = team.status === "disqualified";
+        <div className="overflow-x-auto border rounded-lg">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/50 border-b">
+                <th className="px-3 py-2 text-left font-semibold w-14">Entry</th>
+                <th className="px-3 py-2 text-left font-semibold">Team</th>
+                <th className="px-3 py-2 text-left font-semibold">Owner</th>
+                <th className="px-3 py-2 text-center font-semibold w-16">Total</th>
+                <th className="px-3 py-2 text-left font-semibold bg-amber-100/50 dark:bg-amber-900/20">
+                  <div className="text-xs text-muted-foreground">1 through 10</div>
+                </th>
+                <th className="px-3 py-2 text-left font-semibold bg-green-100/50 dark:bg-green-900/20">
+                  <div className="text-xs text-muted-foreground">11 through 30</div>
+                </th>
+                <th className="px-3 py-2 text-left font-semibold bg-green-100/50 dark:bg-green-900/20">
+                  <div className="text-xs text-muted-foreground">11 through 30</div>
+                </th>
+                <th className="px-3 py-2 text-left font-semibold bg-blue-100/50 dark:bg-blue-900/20">
+                  <div className="text-xs text-muted-foreground">31 through 50</div>
+                </th>
+                <th className="px-3 py-2 text-left font-semibold bg-purple-100/50 dark:bg-purple-900/20">
+                  <div className="text-xs text-muted-foreground">51 and over</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTeams.map((team, idx) => {
+                const isDQ = team.status === "disqualified";
+                const tier1 = getGolferByTier(team.golfers, 1);
+                const tier2a = getGolferByTier(team.golfers, 2, 0);
+                const tier2b = getGolferByTier(team.golfers, 2, 1);
+                const tier3 = getGolferByTier(team.golfers, 3);
+                const tier4 = getGolferByTier(team.golfers, 4);
 
-            return (
-              <Card
-                key={team.team_id}
-                className={`overflow-hidden transition-colors ${
-                  isDQ ? "opacity-60 border-destructive/30" : ""
-                }`}
-              >
-                {/* Team Row */}
-                <button
-                  className="w-full text-left p-4 min-h-[56px] flex items-center justify-between gap-3 hover:bg-muted/50 transition-colors"
-                  onClick={() => toggleTeam(team.team_id)}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span
-                      className={`font-bold text-lg w-8 text-center shrink-0 ${
-                        team.rank <= 3 ? "text-primary" : ""
-                      }`}
-                    >
+                return (
+                  <tr
+                    key={team.team_id}
+                    className={`border-b last:border-b-0 ${
+                      idx % 2 === 0 ? "bg-white dark:bg-background" : "bg-muted/30"
+                    } ${isDQ ? "opacity-50" : ""}`}
+                  >
+                    {/* Entry/Rank */}
+                    <td className="px-3 py-2 font-bold text-center">
                       {isDQ ? "-" : team.rank}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">
-                        {team.team_name}
-                        {isDQ && (
-                          <Badge variant="destructive" className="ml-2 text-xs">
-                            DQ
-                          </Badge>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {team.contestant_name}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span
-                      className={`text-xl font-bold font-mono tabular-nums ${
-                        (team.total_score ?? 0) < 0
-                          ? "text-red-600"
-                          : (team.total_score ?? 0) > 0
-                            ? "text-muted-foreground"
-                            : ""
-                      }`}
-                    >
-                      {formatScore(team.total_score)}
-                    </span>
-                    <svg
-                      className={`w-4 h-4 transition-transform text-muted-foreground ${
-                        isExpanded ? "rotate-180" : ""
-                      }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </div>
-                </button>
+                    </td>
 
-                {/* Expanded Golfer Details */}
-                {isExpanded && team.golfers && (
-                  <CardContent className="pt-0 pb-4">
-                    <div className="border-t border-border pt-3">
-                      <div className="divide-y divide-border">
-                        {team.golfers.map((gs: LeaderboardGolfer) => (
-                          <div
-                            key={gs.id}
-                            className="flex items-center justify-between py-2.5 gap-3"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-sm font-medium truncate">
-                                {gs.name}
-                              </span>
-                              {gs.tier && <TierBadge tier={gs.tier as Tier} />}
-                              {getStatusBadge(gs.status)}
-                            </div>
-                            <div className="flex items-center gap-4 shrink-0">
-                              {gs.thru !== null && gs.status === "STATUS_IN_PROGRESS" && (
-                                <span className="text-xs text-muted-foreground">
-                                  Thru {gs.thru}
-                                </span>
-                              )}
-                              <span
-                                className={`font-mono text-sm font-semibold tabular-nums ${
-                                  (gs.score_to_par ?? 0) < 0
-                                    ? "text-red-600"
-                                    : (gs.score_to_par ?? 0) > 0
-                                      ? "text-muted-foreground"
-                                      : ""
-                                }`}
-                              >
-                                {formatScore(gs.score_to_par)}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })}
+                    {/* Team Name */}
+                    <td className="px-3 py-2 font-medium">
+                      {team.team_name}
+                      {isDQ && (
+                        <Badge variant="destructive" className="ml-2 text-xs">DQ</Badge>
+                      )}
+                    </td>
+
+                    {/* Owner */}
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {team.contestant_name}
+                    </td>
+
+                    {/* Total Score */}
+                    <td className={`px-3 py-2 text-center font-bold tabular-nums ${getScoreColor(team.total_score)}`}>
+                      {formatScore(team.total_score)}
+                    </td>
+
+                    {/* Tier 1: 1-10 */}
+                    <td className="px-3 py-2 bg-amber-50/50 dark:bg-amber-900/10">
+                      {tier1 ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate max-w-[100px]">{tier1.name}</span>
+                          <span className={`tabular-nums ${getScoreColor(tier1.score_to_par)}`}>
+                            {formatScore(tier1.score_to_par)}
+                          </span>
+                        </div>
+                      ) : "-"}
+                    </td>
+
+                    {/* Tier 2a: 11-30 */}
+                    <td className="px-3 py-2 bg-green-50/50 dark:bg-green-900/10">
+                      {tier2a ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate max-w-[100px]">{tier2a.name}</span>
+                          <span className={`tabular-nums ${getScoreColor(tier2a.score_to_par)}`}>
+                            {formatScore(tier2a.score_to_par)}
+                          </span>
+                        </div>
+                      ) : "-"}
+                    </td>
+
+                    {/* Tier 2b: 11-30 */}
+                    <td className="px-3 py-2 bg-green-50/50 dark:bg-green-900/10">
+                      {tier2b ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate max-w-[100px]">{tier2b.name}</span>
+                          <span className={`tabular-nums ${getScoreColor(tier2b.score_to_par)}`}>
+                            {formatScore(tier2b.score_to_par)}
+                          </span>
+                        </div>
+                      ) : "-"}
+                    </td>
+
+                    {/* Tier 3: 31-50 */}
+                    <td className="px-3 py-2 bg-blue-50/50 dark:bg-blue-900/10">
+                      {tier3 ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate max-w-[100px]">{tier3.name}</span>
+                          <span className={`tabular-nums ${getScoreColor(tier3.score_to_par)}`}>
+                            {formatScore(tier3.score_to_par)}
+                          </span>
+                        </div>
+                      ) : "-"}
+                    </td>
+
+                    {/* Tier 4: 51+ */}
+                    <td className="px-3 py-2 bg-purple-50/50 dark:bg-purple-900/10">
+                      {tier4 ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate max-w-[100px]">{tier4.name}</span>
+                          <span className={`tabular-nums ${getScoreColor(tier4.score_to_par)}`}>
+                            {formatScore(tier4.score_to_par)}
+                          </span>
+                        </div>
+                      ) : "-"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
