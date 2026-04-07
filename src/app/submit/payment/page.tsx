@@ -68,6 +68,33 @@ function PaymentContent() {
         </CardContent>
       </Card>
 
+      {/* Instructions */}
+      <Card className="mb-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Payment Instructions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start gap-3">
+            <Badge variant="outline" className="shrink-0 mt-0.5">1</Badge>
+            <div>
+              <p className="font-medium">Scan the QR code, click the link, or search for @pyoung</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Badge variant="outline" className="shrink-0 mt-0.5">2</Badge>
+            <div>
+              <p className="font-medium">Enter ${totalAmount}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Badge variant="outline" className="shrink-0 mt-0.5">3</Badge>
+            <div>
+              <p className="font-medium">For the note, enter &quot;4DIA&quot;</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Venmo QR Code */}
       <Card className="mb-6">
         <CardHeader className="pb-2 text-center">
@@ -92,34 +119,6 @@ function PaymentContent() {
           >
             Open in Venmo app
           </a>
-        </CardContent>
-      </Card>
-
-      {/* Instructions */}
-      <Card className="mb-6">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Payment Instructions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-start gap-3">
-            <Badge variant="outline" className="shrink-0 mt-0.5">1</Badge>
-            <div>
-              <p className="font-medium">Scan the QR code or search for @pyoung</p>
-              <p className="text-sm text-muted-foreground">Open Venmo and scan the code above</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Badge variant="outline" className="shrink-0 mt-0.5">2</Badge>
-            <div>
-              <p className="font-medium">Enter ${totalAmount}</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Badge variant="outline" className="shrink-0 mt-0.5">3</Badge>
-            <div>
-              <p className="font-medium">For the note, enter &quot;4DIA&quot;</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
