@@ -315,7 +315,7 @@ Users can build up to 3 teams in their cart and submit them together. Each team 
 | 3 | 31–50 | 1 |
 | 4 | 51+ | 1 |
 
-Submission deadline: **5:00 AM EDT, April 9, 2026** (first round tee times). Enforced in `src/lib/validation.ts` and can be overridden via admin endpoints.
+Submission deadline: **7:30 AM EDT, April 9, 2026** (before first round tee times). Enforced in `src/lib/validation.ts` and can be overridden via admin endpoints.
 
 ### Leaderboard Visibility
 
@@ -481,5 +481,5 @@ Rankings are pre-computed in PostgreSQL rather than calculated in JavaScript:
 3. $30 per team, max 3 teams per person
 4. No duplicate golfers across your teams
 5. If a golfer WDs or DQs mid-tournament, your team is disqualified
-6. Submissions close 5:00 AM EDT, April 9th
+6. Submissions close 7:30 AM EDT, April 9th
 7. Prizes: 1st (50%), 2nd (30%), 3rd (20%)

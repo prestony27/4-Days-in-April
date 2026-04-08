@@ -18,9 +18,9 @@ import {
 } from "./schema";
 import type { Tier } from "@/types";
 
-// Deadline: 5:00 AM America/New_York, Thursday April 9, 2026
-// In UTC: 9:00 AM (EDT = UTC-4 in April)
-export const SUBMISSION_DEADLINE = new Date("2026-04-09T05:00:00-04:00");
+// Deadline: 7:30 AM America/New_York, Thursday April 9, 2026
+// In UTC: 11:30 AM (EDT = UTC-4 in April)
+export const SUBMISSION_DEADLINE = new Date("2026-04-09T07:30:00-04:00");
 
 export const MAX_TEAMS_PER_EMAIL = 3;
 
@@ -62,7 +62,7 @@ export async function checkSubmissionsOpen(): Promise<void> {
 
   if (now >= SUBMISSION_DEADLINE) {
     throw new ValidationError(
-      "Submissions are closed. The deadline was 5:00 AM EST, April 9th."
+      "Submissions are closed. The deadline was 7:30 AM EST, April 9th."
     );
   }
 
