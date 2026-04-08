@@ -167,34 +167,46 @@ async function loadContestantNames(contestantIds: string[]): Promise<Map<string,
  */
 export async function getLeaderboard(
   limit: number = 50,
-  offset: number = 0
+  offset: number = 0,
+  options: { includeAllTeams?: boolean } = {}
 ): Promise<{
   teams: LeaderboardTeam[];
   total: number;
   lastUpdated: string | null;
 }> {
   const db = getSupabase();
+  const { includeAllTeams = false } = options;
 
   // Get total count and last updated in parallel
+  let countQuery = db
+    .from(TABLE_TEAMS)
+    .select("id", { count: "exact", head: true });
+
+  if (!includeAllTeams) {
+    countQuery = countQuery.eq("payment_status", "completed");
+  }
+
   const [countResult, tournamentState] = await Promise.all([
-    db
-      .from(TABLE_TEAMS)
-      .select("id", { count: "exact", head: true })
-      .eq("payment_status", "completed"),
+    countQuery,
     getTournamentLastUpdated(),
   ]);
 
   const total = countResult.count ?? 0;
 
   // Get paginated teams using pre-computed rank (from DB)
-  const { data: teamRows, error: teamsError } = await db
+  let teamsQuery = db
     .from(TABLE_TEAMS)
     .select(`
       id, team_name, total_score, status, contestant_id, rank,
       tier1_golfer_id, tier2a_golfer_id, tier2b_golfer_id,
       tier3_golfer_id, tier4_golfer_id
-    `)
-    .eq("payment_status", "completed")
+    `);
+
+  if (!includeAllTeams) {
+    teamsQuery = teamsQuery.eq("payment_status", "completed");
+  }
+
+  const { data: teamRows, error: teamsError } = await teamsQuery
     .order("rank", { nullsFirst: false })
     .order("total_score", { nullsFirst: false })
     .range(offset, offset + limit - 1);

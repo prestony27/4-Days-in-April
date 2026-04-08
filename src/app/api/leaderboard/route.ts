@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
   if (isNaN(offset) || offset < 0) offset = 0;
 
   try {
-    const { teams, total, lastUpdated } = await getLeaderboard(limit, offset);
+    const { teams, total, lastUpdated } = await getLeaderboard(limit, offset, { includeAllTeams: isPreview });
 
     return Response.json(
       {
