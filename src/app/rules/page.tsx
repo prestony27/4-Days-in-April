@@ -20,7 +20,7 @@ const RULES = [
   },
   {
     number: 5,
-    text: `Teams have to be submitted by 5 AM EST Thursday, April 9th.`,
+    text: `Teams have to be submitted by 7:30 AM EST Thursday, April 9th.`,
   },
   {
     number: 6,

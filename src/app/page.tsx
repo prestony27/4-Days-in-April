@@ -53,7 +53,7 @@ export default function HomePage() {
               <CountdownTimer />
             </div>
             <p className="text-sm text-white/60 mt-2">
-              5:00 AM EST, Thursday, April 9th
+              7:30 AM EST, Thursday, April 9th
             </p>
           </div>
 

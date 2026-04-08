@@ -108,6 +108,6 @@ export const TIER_CONFIGS: TierConfig[] = [
 
 export const ENTRY_FEE = 30;
 export const MAX_TEAMS = 3;
-export const SUBMISSION_DEADLINE = new Date("2026-04-09T05:00:00-04:00"); // 5 AM EDT (April = EDT)
+export const SUBMISSION_DEADLINE = new Date("2026-04-09T07:30:00-04:00"); // 7:30 AM EDT (April = EDT)
 export const TOURNAMENT_START = new Date("2026-04-09T08:00:00-04:00");
 export const TOURNAMENT_END = new Date("2026-04-12T20:00:00-04:00");
