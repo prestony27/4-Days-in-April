@@ -326,6 +326,178 @@ interface SendRefundEmailParams {
   reason: string;
 }
 
+interface AllTeamsEntry {
+  team_name: string;
+  contestant_name: string;
+  golfers: Array<{
+    name: string;
+    tier: number;
+    world_rank: number;
+  }>;
+}
+
+interface SendDeadlineEmailParams {
+  to: string;
+  contestantName: string;
+  allTeams: AllTeamsEntry[];
+}
+
+/**
+ * Send transparency email at deadline showing all team submissions to all contestants.
+ */
+export async function sendDeadlineEmail({
+  to,
+  contestantName,
+  allTeams,
+}: SendDeadlineEmailParams): Promise<{ success: boolean; error?: string }> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("RESEND_API_KEY not configured, skipping deadline email");
+    return { success: false, error: "Email service not configured" };
+  }
+
+  const totalTeams = allTeams.length;
+  const subject = `Submissions Closed - All ${totalTeams} Team Picks Revealed`;
+
+  const teamsHtml = allTeams.map((team) => {
+    const golferRows = team.golfers
+      .sort((a, b) => a.tier - b.tier)
+      .map((g) => `
+        <tr>
+          <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; font-size: 13px;">T${g.tier}</td>
+          <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; font-size: 13px;">${g.name}</td>
+          <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; color: #6b7280; font-size: 13px;">#${g.world_rank}</td>
+        </tr>
+      `).join("");
+
+    return `
+      <div style="margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+        <div style="background: #065f46; color: white; padding: 10px 12px;">
+          <strong style="font-size: 15px;">${team.team_name}</strong>
+          <span style="opacity: 0.8; font-size: 13px;"> — ${team.contestant_name}</span>
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tbody>
+            ${golferRows}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).join("");
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; max-width: 700px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <h1 style="color: #065f46; margin: 0; font-size: 28px;">Four Days in April</h1>
+          <p style="color: #6b7280; margin: 8px 0 0 0;">2026 Contest</p>
+        </div>
+
+        <div style="background: #ecfdf5; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
+          <p style="margin: 0; color: #065f46; font-size: 18px; font-weight: 600;">
+            Submissions Are Now Closed
+          </p>
+        </div>
+
+        <p>Hi ${contestantName},</p>
+
+        <p>
+          The submission deadline has passed. Below is the <strong>complete list of all ${totalTeams} team submissions</strong>
+          for the Four Days in April 2026 Contest.
+        </p>
+
+        <p style="color: #6b7280; font-size: 14px;">
+          This email is being sent to all contestants for full transparency. No changes can be made to any team after this point.
+        </p>
+
+        <div style="margin: 24px 0;">
+          <h2 style="color: #065f46; font-size: 18px; margin-bottom: 16px; border-bottom: 2px solid #065f46; padding-bottom: 8px;">
+            All Team Submissions (${totalTeams} teams)
+          </h2>
+          ${teamsHtml}
+        </div>
+
+        <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin: 24px 0;">
+          <p style="margin: 0; font-weight: 500;">Track the Tournament</p>
+          <p style="margin: 8px 0 0 0; color: #6b7280;">
+            Follow along on the live leaderboard as scores update throughout the tournament.
+          </p>
+          <p style="margin: 12px 0 0 0;">
+            <a href="https://4-days-in-april.vercel.app/leaderboard"
+               style="display: inline-block; background: #065f46; color: white; padding: 10px 20px;
+                      border-radius: 6px; text-decoration: none; font-weight: 500;">
+              View Leaderboard
+            </a>
+          </p>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px;">
+          The tournament runs April 9-12, 2026. Good luck!
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+        <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+          Four Days in April 2026 Contest<br>
+          Questions? Reply to this email.
+        </p>
+      </body>
+    </html>
+  `;
+
+  const text = `
+Four Days in April 2026 Contest
+Submissions Are Now Closed
+
+Hi ${contestantName},
+
+The submission deadline has passed. Below is the complete list of all ${totalTeams} team submissions for the Four Days in April 2026 Contest.
+
+This email is being sent to all contestants for full transparency. No changes can be made to any team after this point.
+
+ALL TEAM SUBMISSIONS (${totalTeams} teams)
+${"=".repeat(40)}
+
+${allTeams.map((team) => `
+${team.team_name} — ${team.contestant_name}
+${team.golfers
+  .sort((a, b) => a.tier - b.tier)
+  .map((g) => `  T${g.tier}: ${g.name} (#${g.world_rank})`)
+  .join("\n")}
+`).join("\n")}
+
+Track the tournament: https://4-days-in-april.vercel.app/leaderboard
+
+The tournament runs April 9-12, 2026. Good luck!
+  `.trim();
+
+  try {
+    const { error } = await getResend().emails.send({
+      from: "Four Days in April <4daysinapril@ppyconsultinggroup.com>",
+      to,
+      subject,
+      html,
+      text,
+    });
+
+    if (error) {
+      console.error("Failed to send deadline email:", error);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`Deadline transparency email sent to ${to}`);
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("Email send error:", message);
+    return { success: false, error: message };
+  }
+}
+
 export async function sendRefundEmail({
   to,
   contestantName,

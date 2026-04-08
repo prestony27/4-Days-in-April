@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/update-scores",
       "schedule": "*/10 0,12-23 * * *"
+    },
+    {
+      "path": "/api/cron/send-deadline-email",
+      "schedule": "30 11 9 4 *"
     }
   ]
 }

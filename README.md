@@ -10,7 +10,7 @@ A fantasy golf contest website for the 2026 Masters Tournament (April 9-12). Use
 - Multi-team cart with single checkout (submit up to 3 teams at once)
 - Live tournament leaderboard with auto-polling
 - Venmo payment with manual verification
-- Confirmation emails via Resend
+- Confirmation emails via Resend + deadline transparency email to all contestants
 - ESPN-sourced live scoring with admin fallback
 - Mobile-first responsive design
 
@@ -19,7 +19,7 @@ A fantasy golf contest website for the 2026 Masters Tournament (April 9-12). Use
 | Component | Status | Notes |
 |-----------|--------|-------|
 | Frontend (Next.js) | ✅ Deployed | Live on Vercel |
-| Backend (Next.js API Routes) | ✅ Deployed | 17 endpoints working |
+| Backend (Next.js API Routes) | ✅ Deployed | 18 endpoints working |
 | Database (Supabase) | ✅ Ready | Schema deployed, 91 golfers seeded |
 | Payments (Venmo) | ✅ Manual | QR code + manual verification |
 | Email (Resend) | ✅ Configured | Confirmation emails on submission |
@@ -130,7 +130,8 @@ TheMasters/
 │   ├── page.tsx                # Landing page (countdown, rules, CTAs)
 │   ├── rankings/page.tsx       # Tiered golfer rankings with search
 │   ├── teams/builder/page.tsx  # Step-by-step team builder wizard
-│   ├── leaderboard/page.tsx    # Live tournament leaderboard
+│   ├── leaderboard/page.tsx    # Live tournament leaderboard (table layout)
+│   ├── leaderboard/preview/page.tsx  # Hidden preview page for testing
 │   ├── submit/page.tsx         # Payment info page
 │   ├── submit/payment/page.tsx # Venmo QR code and payment instructions
 │   ├── submit/success/page.tsx # Post-submission confirmation
@@ -142,6 +143,7 @@ TheMasters/
 │       ├── submit-team/route.ts
 │       ├── submit-teams/route.ts
 │       ├── cron/update-scores/route.ts
+│       ├── cron/send-deadline-email/route.ts
 │       └── admin/              # Admin endpoints
 ├── src/components/
 │   ├── shared/                 # Header, Footer, CountdownTimer, GolferCard, TierBadge
@@ -174,7 +176,8 @@ The frontend uses the Next.js App Router (`src/app/`). Each directory under `src
 | `/` | `page.tsx` | Static | Landing page with countdown timer, rules overview, tier breakdown, and CTAs |
 | `/rankings` | `rankings/page.tsx` | Client | Searchable, collapsible tier-grouped golfer list. Fetches from `/api/golfers` |
 | `/teams/builder` | `teams/builder/page.tsx` | Client | 6-step team builder wizard with multi-team cart support |
-| `/leaderboard` | `leaderboard/page.tsx` | Client | Shows entries before deadline, full leaderboard after |
+| `/leaderboard` | `leaderboard/page.tsx` | Client | Shows entries before deadline, full leaderboard table after |
+| `/leaderboard/preview` | `leaderboard/preview/page.tsx` | Client | Hidden preview page (bypasses deadline check) |
 | `/submit` | `submit/page.tsx` | Static | Entry info page with CTA to the team builder |
 | `/submit/payment` | `submit/payment/page.tsx` | Client | Venmo QR code and payment instructions |
 | `/submit/success` | `submit/success/page.tsx` | Client | Post-submission confirmation with team details |
@@ -229,7 +232,7 @@ All API routes are Next.js Route Handlers in `src/app/api/`. Each `route.ts` fil
 | `src/lib/scoring.ts` | Pure score calculation and tiebreaker logic |
 | `src/lib/score-pipeline.ts` | Unified scoring pipeline for leaderboard, cron, and admin |
 | `src/lib/espn-client.ts` | ESPN JSON API client (tournament ID `401811941`) |
-| `src/lib/email.ts` | Resend client for confirmation emails |
+| `src/lib/email.ts` | Resend client for confirmation and deadline transparency emails |
 | `src/lib/auth.ts` | Admin and cron Bearer token verification |
 | `src/lib/rate-limit.ts` | Distributed rate limiting via Upstash Redis |
 
@@ -252,6 +255,7 @@ All API routes are Next.js Route Handlers in `src/app/api/`. Each `route.ts` fil
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET/POST | `/api/cron/update-scores` | `CRON_SECRET` | Fetch ESPN scores, recalculate teams |
+| GET/POST | `/api/cron/send-deadline-email` | `CRON_SECRET` | Send transparency email with all team picks to all contestants |
 
 ### Admin Endpoints
 
@@ -321,10 +325,13 @@ Submission deadline: **7:30 AM EDT, April 9, 2026** (before first round tee time
 
 **Before the deadline:** The leaderboard shows an "Entries" view with team names and contestant names only. Golfer picks are hidden to prevent copying.
 
-**After the deadline:** The full leaderboard is revealed with:
-- Team rankings and scores
-- Expandable rows showing each team's golfer picks
+**After the deadline:** The full leaderboard is revealed as a table with:
+- Team rankings, names, owners, and total scores
+- Color-coded tier columns showing each golfer pick and their individual score
+- Score coloring: red (under par), Masters green (over par), blue (even par)
 - Live score updates during the tournament
+
+**Deadline transparency email:** At exactly 7:30 AM EDT, an automated email is sent to all contestants containing every team's picks. This provides full transparency and prevents any claims of cheating.
 
 ### Duplicate Golfer Prevention
 
@@ -389,7 +396,9 @@ tier1_golfer_id, tier2a_golfer_id, tier2b_golfer_id, tier3_golfer_id, tier4_golf
 2. Set Framework Preset to **Next.js**
 3. Set all environment variables in Vercel project settings
 4. Deploy — Vercel handles everything automatically
-5. Cron job (`/api/cron/update-scores`) runs every 10 minutes during tournament hours (8am-8pm EDT)
+5. Cron jobs configured in `vercel.json`:
+   - `/api/cron/update-scores` — runs every 10 minutes during tournament hours (8am-8pm EDT)
+   - `/api/cron/send-deadline-email` — runs once at 7:30 AM EDT on April 9th (deadline transparency email)
 
 ### Resend (Email)
 

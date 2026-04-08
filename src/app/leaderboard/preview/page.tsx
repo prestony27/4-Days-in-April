@@ -25,9 +25,9 @@ function formatScore(score: number | null): string {
 
 function getScoreColor(score: number | null): string {
   if (score === null) return "text-muted-foreground";
-  if (score < 0) return "text-red-600 font-semibold";
-  if (score > 0) return "text-blue-600";
-  return "";
+  if (score < 0) return "text-red-600 font-semibold";        // Under par - red
+  if (score > 0) return "text-brand-green font-semibold";    // Over par - Masters green
+  return "text-blue-600 font-semibold";                      // Even par - blue
 }
 
 function getGolferByTier(golfers: LeaderboardGolfer[] | undefined, tier: number, index = 0): LeaderboardGolfer | null {
