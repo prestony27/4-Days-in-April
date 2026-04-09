@@ -151,7 +151,7 @@ export default function LeaderboardPreviewPage() {
                   >
                     {/* Entry/Rank */}
                     <td className="px-3 py-2 font-bold text-center">
-                      {isDQ ? "-" : team.rank}
+                      {isDQ ? "-" : (team.is_tied ? `T${team.rank}` : team.rank)}
                     </td>
 
                     {/* Team Name */}

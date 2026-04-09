@@ -70,6 +70,7 @@ export interface LeaderboardGolfer {
 
 export interface LeaderboardTeam {
   rank: number;
+  is_tied: boolean;
   team_id: string;
   team_name: string;
   contestant_name: string;

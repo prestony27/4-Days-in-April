@@ -407,6 +407,23 @@ tier1_golfer_id, tier2a_golfer_id, tier2b_golfer_id, tier3_golfer_id, tier4_golf
 3. Create an API key and set `RESEND_API_KEY` in Vercel environment variables
 4. Confirmation emails are sent automatically when teams are submitted
 
+**Rate Limit Note:** Resend limits requests to 5/second. The deadline transparency email cron can hit this limit when sending to many contestants simultaneously. If some emails fail due to rate limiting, use the manual resend script:
+
+```bash
+# Requires RESEND_API_KEY in .env.local
+npx tsx scripts/resend-deadline-emails.ts
+```
+
+This script:
+- Fetches all contestants from Supabase
+- Excludes emails that already succeeded (hardcoded list in script)
+- Sends to remaining recipients with rate limiting (250ms delay between sends)
+
+To use after a partial failure:
+1. Check Vercel logs to identify which emails succeeded
+2. Update the `ALREADY_SENT` set in `scripts/resend-deadline-emails.ts`
+3. Run the script locally
+
 ### Supabase
 
 1. Run migrations from `supabase/migrations/`

@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 4. Send email to each contestant
+    // 4. Send email to each contestant (with rate limiting for Resend's 5/sec limit)
     let emailsSent = 0;
     let emailsFailed = 0;
     const errors: string[] = [];
@@ -149,6 +149,9 @@ export async function POST(request: NextRequest) {
         emailsFailed++;
         errors.push(`${contestant.email}: ${result.error}`);
       }
+
+      // Rate limit: 250ms delay = 4 emails/sec (under Resend's 5/sec limit)
+      await new Promise((resolve) => setTimeout(resolve, 250));
     }
 
     console.log(`Deadline emails: ${emailsSent} sent, ${emailsFailed} failed`);

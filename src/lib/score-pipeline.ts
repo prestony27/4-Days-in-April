@@ -197,7 +197,7 @@ export async function getLeaderboard(
   let teamsQuery = db
     .from(TABLE_TEAMS)
     .select(`
-      id, team_name, total_score, status, contestant_id, rank,
+      id, team_name, total_score, status, contestant_id, rank, is_tied,
       tier1_golfer_id, tier2a_golfer_id, tier2b_golfer_id,
       tier3_golfer_id, tier4_golfer_id
     `);
@@ -289,6 +289,7 @@ export async function getLeaderboard(
 
     return {
       rank: teamRow.rank ?? 0,
+      is_tied: teamRow.is_tied ?? false,
       team_id: teamRow.id,
       team_name: teamRow.team_name,
       contestant_name: contestantName,
